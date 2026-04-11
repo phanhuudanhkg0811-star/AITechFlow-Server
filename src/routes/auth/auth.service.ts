@@ -1,21 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as crypto from 'crypto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtAuthService } from 'src/shared/services/jwt.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
-
-export type OAuthProfile = {
-  email: string;
-  githubId: string;
-  githubUsername: string;
-  name: string;
-  avatarUrl: string;
-};
+import { AuthRepository } from './auth.repository';
+import { OAuthProfile } from './auth.model';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService,
+    private jwtAuthService: JwtAuthService,
+    private authRepository: AuthRepository,
   ) {}
 
   async validateOAuthLogin(
@@ -37,24 +31,23 @@ export class AuthService {
         githubUsername: profile.githubUsername,
         name: profile.name,
         avatarUrl: profile.avatarUrl,
-        role: 'CANDIDATE', // Mặc định là ứng viên
+        role: 'CANDIDATE',
       },
     });
 
-    // 2. Tạo Access Token (JWT)
     const payload = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' }); // Sống 15 phút
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtAuthService.signAccessToken(payload),
+      this.jwtAuthService.signRefreshToken(payload),
+    ]);
 
-    // 3. Tạo Refresh Token (Chuỗi ngẫu nhiên an toàn)
-    const refreshToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // Sống 7 ngày
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // 4. Lưu Refresh Token vào bảng Session
     await this.prisma.session.create({
       data: {
         userId: user.id,
-        refreshToken: refreshToken, // Trong thực tế có thể hash bằng bcrypt trước khi lưu
+        refreshToken: refreshToken,
         ipAddress: ipAddress,
         userAgent: userAgent,
         expiresAt: expiresAt,
@@ -62,5 +55,79 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  async refresh(
+    refreshToken: string,
+    ipAddress: string, // Thêm 2 tham số này để lưu Session mới
+    userAgent: string,
+  ) {
+    try {
+      // 1. Kiểm tra định dạng và chữ ký token (Verify)
+      await this.jwtAuthService.verifyRefreshToken(refreshToken);
+
+      // 2. Xóa token cũ khỏi Database
+      const deletedToken =
+        await this.authRepository.deleteRefreshToken(refreshToken);
+
+      // 3. Kiểm tra xem token có thực sự tồn tại trong DB trước đó không
+      if (!deletedToken) {
+        throw new UnauthorizedException(
+          'Refresh token không tồn tại hoặc đã bị thu hồi',
+        );
+      }
+
+      // 4. TRUY XUẤT LẠI USER TỪ DATABASE (Cách an toàn và chuẩn xác nhất)
+      const user = await this.prisma.user.findUnique({
+        where: { id: deletedToken.userId }, // Dùng userId từ bảng Session để tìm User
+      });
+
+      if (!user) {
+        throw new UnauthorizedException(
+          'Người dùng không còn tồn tại trong hệ thống',
+        );
+      }
+
+      // 5. Tạo Payload MỚI NHẤT
+      const payload = { sub: user.id, email: user.email, role: user.role };
+
+      // 6. Cấp một cặp vé hoàn toàn mới
+      const [newAccessToken, newRefreshToken] = await Promise.all([
+        this.jwtAuthService.signAccessToken(payload),
+        this.jwtAuthService.signRefreshToken(payload),
+      ]);
+
+      // 7. Tính ngày hết hạn cho vé mới
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // 8. Lưu phiên làm việc mới vào Database
+      await this.prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken: newRefreshToken,
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+          expiresAt: expiresAt,
+        },
+      });
+
+      // 9. Trả về cho Controller
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      console.error('Refresh Token Error:', error);
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại',
+      );
+    }
+  }
+
+  async logout(refreshToken) {
+    try {
+      await this.authRepository.deleteRefreshToken(refreshToken);
+    } catch (error) {
+      console.error('Logout Error:', error);
+      throw new UnauthorizedException('Đăng xuất không thành công');
+    }
   }
 }

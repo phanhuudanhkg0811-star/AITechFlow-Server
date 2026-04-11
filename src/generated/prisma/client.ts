@@ -79,3 +79,8 @@ export type PromptLog = Prisma.PromptLogModel
  * 
  */
 export type AssessmentReport = Prisma.AssessmentReportModel
+/**
+ * Model TestScenario
+ * 
+ */
+export type TestScenario = Prisma.TestScenarioModel

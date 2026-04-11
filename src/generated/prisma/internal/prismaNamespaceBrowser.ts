@@ -58,7 +58,8 @@ export const ModelName = {
   TestSession: 'TestSession',
   IdeEvent: 'IdeEvent',
   PromptLog: 'PromptLog',
-  AssessmentReport: 'AssessmentReport'
+  AssessmentReport: 'AssessmentReport',
+  TestScenario: 'TestScenario'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -109,6 +110,8 @@ export const JobDescriptionScalarFieldEnum = {
   id: 'id',
   title: 'title',
   content: 'content',
+  hrEmail: 'hrEmail',
+  creatorId: 'creatorId',
   createdAt: 'createdAt'
 } as const
 
@@ -130,8 +133,10 @@ export type ApplicationScalarFieldEnum = (typeof ApplicationScalarFieldEnum)[key
 export const TestSessionScalarFieldEnum = {
   id: 'id',
   applicationId: 'applicationId',
+  scenarioId: 'scenarioId',
   startTime: 'startTime',
-  endTime: 'endTime'
+  endTime: 'endTime',
+  finalCode: 'finalCode'
 } as const
 
 export type TestSessionScalarFieldEnum = (typeof TestSessionScalarFieldEnum)[keyof typeof TestSessionScalarFieldEnum]
@@ -172,6 +177,20 @@ export const AssessmentReportScalarFieldEnum = {
 export type AssessmentReportScalarFieldEnum = (typeof AssessmentReportScalarFieldEnum)[keyof typeof AssessmentReportScalarFieldEnum]
 
 
+export const TestScenarioScalarFieldEnum = {
+  id: 'id',
+  jobId: 'jobId',
+  title: 'title',
+  difficulty: 'difficulty',
+  timeLimit: 'timeLimit',
+  context: 'context',
+  initialCode: 'initialCode',
+  createdAt: 'createdAt'
+} as const
+
+export type TestScenarioScalarFieldEnum = (typeof TestScenarioScalarFieldEnum)[keyof typeof TestScenarioScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -180,19 +199,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

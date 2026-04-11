@@ -27,6 +27,7 @@ export type AggregateTestSession = {
 export type TestSessionMinAggregateOutputType = {
   id: string | null
   applicationId: string | null
+  scenarioId: string | null
   startTime: Date | null
   endTime: Date | null
 }
@@ -34,6 +35,7 @@ export type TestSessionMinAggregateOutputType = {
 export type TestSessionMaxAggregateOutputType = {
   id: string | null
   applicationId: string | null
+  scenarioId: string | null
   startTime: Date | null
   endTime: Date | null
 }
@@ -41,8 +43,10 @@ export type TestSessionMaxAggregateOutputType = {
 export type TestSessionCountAggregateOutputType = {
   id: number
   applicationId: number
+  scenarioId: number
   startTime: number
   endTime: number
+  finalCode: number
   _all: number
 }
 
@@ -50,6 +54,7 @@ export type TestSessionCountAggregateOutputType = {
 export type TestSessionMinAggregateInputType = {
   id?: true
   applicationId?: true
+  scenarioId?: true
   startTime?: true
   endTime?: true
 }
@@ -57,6 +62,7 @@ export type TestSessionMinAggregateInputType = {
 export type TestSessionMaxAggregateInputType = {
   id?: true
   applicationId?: true
+  scenarioId?: true
   startTime?: true
   endTime?: true
 }
@@ -64,8 +70,10 @@ export type TestSessionMaxAggregateInputType = {
 export type TestSessionCountAggregateInputType = {
   id?: true
   applicationId?: true
+  scenarioId?: true
   startTime?: true
   endTime?: true
+  finalCode?: true
   _all?: true
 }
 
@@ -144,8 +152,10 @@ export type TestSessionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 export type TestSessionGroupByOutputType = {
   id: string
   applicationId: string
+  scenarioId: string
   startTime: Date | null
   endTime: Date | null
+  finalCode: runtime.JsonValue | null
   _count: TestSessionCountAggregateOutputType | null
   _min: TestSessionMinAggregateOutputType | null
   _max: TestSessionMaxAggregateOutputType | null
@@ -172,9 +182,12 @@ export type TestSessionWhereInput = {
   NOT?: Prisma.TestSessionWhereInput | Prisma.TestSessionWhereInput[]
   id?: Prisma.StringFilter<"TestSession"> | string
   applicationId?: Prisma.StringFilter<"TestSession"> | string
+  scenarioId?: Prisma.StringFilter<"TestSession"> | string
   startTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
   endTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
+  finalCode?: Prisma.JsonNullableFilter<"TestSession">
   application?: Prisma.XOR<Prisma.ApplicationScalarRelationFilter, Prisma.ApplicationWhereInput>
+  scenario?: Prisma.XOR<Prisma.TestScenarioScalarRelationFilter, Prisma.TestScenarioWhereInput>
   ideEvents?: Prisma.IdeEventListRelationFilter
   promptLogs?: Prisma.PromptLogListRelationFilter
 }
@@ -182,9 +195,12 @@ export type TestSessionWhereInput = {
 export type TestSessionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   applicationId?: Prisma.SortOrder
+  scenarioId?: Prisma.SortOrder
   startTime?: Prisma.SortOrderInput | Prisma.SortOrder
   endTime?: Prisma.SortOrderInput | Prisma.SortOrder
+  finalCode?: Prisma.SortOrderInput | Prisma.SortOrder
   application?: Prisma.ApplicationOrderByWithRelationInput
+  scenario?: Prisma.TestScenarioOrderByWithRelationInput
   ideEvents?: Prisma.IdeEventOrderByRelationAggregateInput
   promptLogs?: Prisma.PromptLogOrderByRelationAggregateInput
 }
@@ -195,9 +211,12 @@ export type TestSessionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.TestSessionWhereInput | Prisma.TestSessionWhereInput[]
   OR?: Prisma.TestSessionWhereInput[]
   NOT?: Prisma.TestSessionWhereInput | Prisma.TestSessionWhereInput[]
+  scenarioId?: Prisma.StringFilter<"TestSession"> | string
   startTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
   endTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
+  finalCode?: Prisma.JsonNullableFilter<"TestSession">
   application?: Prisma.XOR<Prisma.ApplicationScalarRelationFilter, Prisma.ApplicationWhereInput>
+  scenario?: Prisma.XOR<Prisma.TestScenarioScalarRelationFilter, Prisma.TestScenarioWhereInput>
   ideEvents?: Prisma.IdeEventListRelationFilter
   promptLogs?: Prisma.PromptLogListRelationFilter
 }, "id" | "applicationId">
@@ -205,8 +224,10 @@ export type TestSessionWhereUniqueInput = Prisma.AtLeast<{
 export type TestSessionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   applicationId?: Prisma.SortOrder
+  scenarioId?: Prisma.SortOrder
   startTime?: Prisma.SortOrderInput | Prisma.SortOrder
   endTime?: Prisma.SortOrderInput | Prisma.SortOrder
+  finalCode?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TestSessionCountOrderByAggregateInput
   _max?: Prisma.TestSessionMaxOrderByAggregateInput
   _min?: Prisma.TestSessionMinOrderByAggregateInput
@@ -218,15 +239,19 @@ export type TestSessionScalarWhereWithAggregatesInput = {
   NOT?: Prisma.TestSessionScalarWhereWithAggregatesInput | Prisma.TestSessionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"TestSession"> | string
   applicationId?: Prisma.StringWithAggregatesFilter<"TestSession"> | string
+  scenarioId?: Prisma.StringWithAggregatesFilter<"TestSession"> | string
   startTime?: Prisma.DateTimeNullableWithAggregatesFilter<"TestSession"> | Date | string | null
   endTime?: Prisma.DateTimeNullableWithAggregatesFilter<"TestSession"> | Date | string | null
+  finalCode?: Prisma.JsonNullableWithAggregatesFilter<"TestSession">
 }
 
 export type TestSessionCreateInput = {
   id?: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application: Prisma.ApplicationCreateNestedOneWithoutTestSessionInput
+  scenario: Prisma.TestScenarioCreateNestedOneWithoutTestSessionsInput
   ideEvents?: Prisma.IdeEventCreateNestedManyWithoutSessionInput
   promptLogs?: Prisma.PromptLogCreateNestedManyWithoutSessionInput
 }
@@ -234,8 +259,10 @@ export type TestSessionCreateInput = {
 export type TestSessionUncheckedCreateInput = {
   id?: string
   applicationId: string
+  scenarioId: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedCreateNestedManyWithoutSessionInput
   promptLogs?: Prisma.PromptLogUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -244,7 +271,9 @@ export type TestSessionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application?: Prisma.ApplicationUpdateOneRequiredWithoutTestSessionNestedInput
+  scenario?: Prisma.TestScenarioUpdateOneRequiredWithoutTestSessionsNestedInput
   ideEvents?: Prisma.IdeEventUpdateManyWithoutSessionNestedInput
   promptLogs?: Prisma.PromptLogUpdateManyWithoutSessionNestedInput
 }
@@ -252,8 +281,10 @@ export type TestSessionUpdateInput = {
 export type TestSessionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  scenarioId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedUpdateManyWithoutSessionNestedInput
   promptLogs?: Prisma.PromptLogUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -261,21 +292,26 @@ export type TestSessionUncheckedUpdateInput = {
 export type TestSessionCreateManyInput = {
   id?: string
   applicationId: string
+  scenarioId: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TestSessionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TestSessionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  scenarioId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TestSessionNullableScalarRelationFilter = {
@@ -286,13 +322,16 @@ export type TestSessionNullableScalarRelationFilter = {
 export type TestSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   applicationId?: Prisma.SortOrder
+  scenarioId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
+  finalCode?: Prisma.SortOrder
 }
 
 export type TestSessionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   applicationId?: Prisma.SortOrder
+  scenarioId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
 }
@@ -300,6 +339,7 @@ export type TestSessionMaxOrderByAggregateInput = {
 export type TestSessionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   applicationId?: Prisma.SortOrder
+  scenarioId?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
 }
@@ -307,6 +347,16 @@ export type TestSessionMinOrderByAggregateInput = {
 export type TestSessionScalarRelationFilter = {
   is?: Prisma.TestSessionWhereInput
   isNot?: Prisma.TestSessionWhereInput
+}
+
+export type TestSessionListRelationFilter = {
+  every?: Prisma.TestSessionWhereInput
+  some?: Prisma.TestSessionWhereInput
+  none?: Prisma.TestSessionWhereInput
+}
+
+export type TestSessionOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type TestSessionCreateNestedOneWithoutApplicationInput = {
@@ -373,18 +423,64 @@ export type TestSessionUpdateOneRequiredWithoutPromptLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TestSessionUpdateToOneWithWhereWithoutPromptLogsInput, Prisma.TestSessionUpdateWithoutPromptLogsInput>, Prisma.TestSessionUncheckedUpdateWithoutPromptLogsInput>
 }
 
+export type TestSessionCreateNestedManyWithoutScenarioInput = {
+  create?: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput> | Prisma.TestSessionCreateWithoutScenarioInput[] | Prisma.TestSessionUncheckedCreateWithoutScenarioInput[]
+  connectOrCreate?: Prisma.TestSessionCreateOrConnectWithoutScenarioInput | Prisma.TestSessionCreateOrConnectWithoutScenarioInput[]
+  createMany?: Prisma.TestSessionCreateManyScenarioInputEnvelope
+  connect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+}
+
+export type TestSessionUncheckedCreateNestedManyWithoutScenarioInput = {
+  create?: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput> | Prisma.TestSessionCreateWithoutScenarioInput[] | Prisma.TestSessionUncheckedCreateWithoutScenarioInput[]
+  connectOrCreate?: Prisma.TestSessionCreateOrConnectWithoutScenarioInput | Prisma.TestSessionCreateOrConnectWithoutScenarioInput[]
+  createMany?: Prisma.TestSessionCreateManyScenarioInputEnvelope
+  connect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+}
+
+export type TestSessionUpdateManyWithoutScenarioNestedInput = {
+  create?: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput> | Prisma.TestSessionCreateWithoutScenarioInput[] | Prisma.TestSessionUncheckedCreateWithoutScenarioInput[]
+  connectOrCreate?: Prisma.TestSessionCreateOrConnectWithoutScenarioInput | Prisma.TestSessionCreateOrConnectWithoutScenarioInput[]
+  upsert?: Prisma.TestSessionUpsertWithWhereUniqueWithoutScenarioInput | Prisma.TestSessionUpsertWithWhereUniqueWithoutScenarioInput[]
+  createMany?: Prisma.TestSessionCreateManyScenarioInputEnvelope
+  set?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  disconnect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  delete?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  connect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  update?: Prisma.TestSessionUpdateWithWhereUniqueWithoutScenarioInput | Prisma.TestSessionUpdateWithWhereUniqueWithoutScenarioInput[]
+  updateMany?: Prisma.TestSessionUpdateManyWithWhereWithoutScenarioInput | Prisma.TestSessionUpdateManyWithWhereWithoutScenarioInput[]
+  deleteMany?: Prisma.TestSessionScalarWhereInput | Prisma.TestSessionScalarWhereInput[]
+}
+
+export type TestSessionUncheckedUpdateManyWithoutScenarioNestedInput = {
+  create?: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput> | Prisma.TestSessionCreateWithoutScenarioInput[] | Prisma.TestSessionUncheckedCreateWithoutScenarioInput[]
+  connectOrCreate?: Prisma.TestSessionCreateOrConnectWithoutScenarioInput | Prisma.TestSessionCreateOrConnectWithoutScenarioInput[]
+  upsert?: Prisma.TestSessionUpsertWithWhereUniqueWithoutScenarioInput | Prisma.TestSessionUpsertWithWhereUniqueWithoutScenarioInput[]
+  createMany?: Prisma.TestSessionCreateManyScenarioInputEnvelope
+  set?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  disconnect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  delete?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  connect?: Prisma.TestSessionWhereUniqueInput | Prisma.TestSessionWhereUniqueInput[]
+  update?: Prisma.TestSessionUpdateWithWhereUniqueWithoutScenarioInput | Prisma.TestSessionUpdateWithWhereUniqueWithoutScenarioInput[]
+  updateMany?: Prisma.TestSessionUpdateManyWithWhereWithoutScenarioInput | Prisma.TestSessionUpdateManyWithWhereWithoutScenarioInput[]
+  deleteMany?: Prisma.TestSessionScalarWhereInput | Prisma.TestSessionScalarWhereInput[]
+}
+
 export type TestSessionCreateWithoutApplicationInput = {
   id?: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  scenario: Prisma.TestScenarioCreateNestedOneWithoutTestSessionsInput
   ideEvents?: Prisma.IdeEventCreateNestedManyWithoutSessionInput
   promptLogs?: Prisma.PromptLogCreateNestedManyWithoutSessionInput
 }
 
 export type TestSessionUncheckedCreateWithoutApplicationInput = {
   id?: string
+  scenarioId: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedCreateNestedManyWithoutSessionInput
   promptLogs?: Prisma.PromptLogUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -409,14 +505,18 @@ export type TestSessionUpdateWithoutApplicationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  scenario?: Prisma.TestScenarioUpdateOneRequiredWithoutTestSessionsNestedInput
   ideEvents?: Prisma.IdeEventUpdateManyWithoutSessionNestedInput
   promptLogs?: Prisma.PromptLogUpdateManyWithoutSessionNestedInput
 }
 
 export type TestSessionUncheckedUpdateWithoutApplicationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  scenarioId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedUpdateManyWithoutSessionNestedInput
   promptLogs?: Prisma.PromptLogUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -425,15 +525,19 @@ export type TestSessionCreateWithoutIdeEventsInput = {
   id?: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application: Prisma.ApplicationCreateNestedOneWithoutTestSessionInput
+  scenario: Prisma.TestScenarioCreateNestedOneWithoutTestSessionsInput
   promptLogs?: Prisma.PromptLogCreateNestedManyWithoutSessionInput
 }
 
 export type TestSessionUncheckedCreateWithoutIdeEventsInput = {
   id?: string
   applicationId: string
+  scenarioId: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   promptLogs?: Prisma.PromptLogUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -457,15 +561,19 @@ export type TestSessionUpdateWithoutIdeEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application?: Prisma.ApplicationUpdateOneRequiredWithoutTestSessionNestedInput
+  scenario?: Prisma.TestScenarioUpdateOneRequiredWithoutTestSessionsNestedInput
   promptLogs?: Prisma.PromptLogUpdateManyWithoutSessionNestedInput
 }
 
 export type TestSessionUncheckedUpdateWithoutIdeEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  scenarioId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   promptLogs?: Prisma.PromptLogUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -473,15 +581,19 @@ export type TestSessionCreateWithoutPromptLogsInput = {
   id?: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application: Prisma.ApplicationCreateNestedOneWithoutTestSessionInput
+  scenario: Prisma.TestScenarioCreateNestedOneWithoutTestSessionsInput
   ideEvents?: Prisma.IdeEventCreateNestedManyWithoutSessionInput
 }
 
 export type TestSessionUncheckedCreateWithoutPromptLogsInput = {
   id?: string
   applicationId: string
+  scenarioId: string
   startTime?: Date | string | null
   endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -505,16 +617,114 @@ export type TestSessionUpdateWithoutPromptLogsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   application?: Prisma.ApplicationUpdateOneRequiredWithoutTestSessionNestedInput
+  scenario?: Prisma.TestScenarioUpdateOneRequiredWithoutTestSessionsNestedInput
   ideEvents?: Prisma.IdeEventUpdateManyWithoutSessionNestedInput
 }
 
 export type TestSessionUncheckedUpdateWithoutPromptLogsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  scenarioId?: Prisma.StringFieldUpdateOperationsInput | string
   startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   ideEvents?: Prisma.IdeEventUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type TestSessionCreateWithoutScenarioInput = {
+  id?: string
+  startTime?: Date | string | null
+  endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  application: Prisma.ApplicationCreateNestedOneWithoutTestSessionInput
+  ideEvents?: Prisma.IdeEventCreateNestedManyWithoutSessionInput
+  promptLogs?: Prisma.PromptLogCreateNestedManyWithoutSessionInput
+}
+
+export type TestSessionUncheckedCreateWithoutScenarioInput = {
+  id?: string
+  applicationId: string
+  startTime?: Date | string | null
+  endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  ideEvents?: Prisma.IdeEventUncheckedCreateNestedManyWithoutSessionInput
+  promptLogs?: Prisma.PromptLogUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type TestSessionCreateOrConnectWithoutScenarioInput = {
+  where: Prisma.TestSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput>
+}
+
+export type TestSessionCreateManyScenarioInputEnvelope = {
+  data: Prisma.TestSessionCreateManyScenarioInput | Prisma.TestSessionCreateManyScenarioInput[]
+  skipDuplicates?: boolean
+}
+
+export type TestSessionUpsertWithWhereUniqueWithoutScenarioInput = {
+  where: Prisma.TestSessionWhereUniqueInput
+  update: Prisma.XOR<Prisma.TestSessionUpdateWithoutScenarioInput, Prisma.TestSessionUncheckedUpdateWithoutScenarioInput>
+  create: Prisma.XOR<Prisma.TestSessionCreateWithoutScenarioInput, Prisma.TestSessionUncheckedCreateWithoutScenarioInput>
+}
+
+export type TestSessionUpdateWithWhereUniqueWithoutScenarioInput = {
+  where: Prisma.TestSessionWhereUniqueInput
+  data: Prisma.XOR<Prisma.TestSessionUpdateWithoutScenarioInput, Prisma.TestSessionUncheckedUpdateWithoutScenarioInput>
+}
+
+export type TestSessionUpdateManyWithWhereWithoutScenarioInput = {
+  where: Prisma.TestSessionScalarWhereInput
+  data: Prisma.XOR<Prisma.TestSessionUpdateManyMutationInput, Prisma.TestSessionUncheckedUpdateManyWithoutScenarioInput>
+}
+
+export type TestSessionScalarWhereInput = {
+  AND?: Prisma.TestSessionScalarWhereInput | Prisma.TestSessionScalarWhereInput[]
+  OR?: Prisma.TestSessionScalarWhereInput[]
+  NOT?: Prisma.TestSessionScalarWhereInput | Prisma.TestSessionScalarWhereInput[]
+  id?: Prisma.StringFilter<"TestSession"> | string
+  applicationId?: Prisma.StringFilter<"TestSession"> | string
+  scenarioId?: Prisma.StringFilter<"TestSession"> | string
+  startTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
+  endTime?: Prisma.DateTimeNullableFilter<"TestSession"> | Date | string | null
+  finalCode?: Prisma.JsonNullableFilter<"TestSession">
+}
+
+export type TestSessionCreateManyScenarioInput = {
+  id?: string
+  applicationId: string
+  startTime?: Date | string | null
+  endTime?: Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type TestSessionUpdateWithoutScenarioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  application?: Prisma.ApplicationUpdateOneRequiredWithoutTestSessionNestedInput
+  ideEvents?: Prisma.IdeEventUpdateManyWithoutSessionNestedInput
+  promptLogs?: Prisma.PromptLogUpdateManyWithoutSessionNestedInput
+}
+
+export type TestSessionUncheckedUpdateWithoutScenarioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  ideEvents?: Prisma.IdeEventUncheckedUpdateManyWithoutSessionNestedInput
+  promptLogs?: Prisma.PromptLogUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type TestSessionUncheckedUpdateManyWithoutScenarioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  applicationId?: Prisma.StringFieldUpdateOperationsInput | string
+  startTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalCode?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 
@@ -560,9 +770,12 @@ export type TestSessionCountOutputTypeCountPromptLogsArgs<ExtArgs extends runtim
 export type TestSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   applicationId?: boolean
+  scenarioId?: boolean
   startTime?: boolean
   endTime?: boolean
+  finalCode?: boolean
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
   ideEvents?: boolean | Prisma.TestSession$ideEventsArgs<ExtArgs>
   promptLogs?: boolean | Prisma.TestSession$promptLogsArgs<ExtArgs>
   _count?: boolean | Prisma.TestSessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -571,52 +784,66 @@ export type TestSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
 export type TestSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   applicationId?: boolean
+  scenarioId?: boolean
   startTime?: boolean
   endTime?: boolean
+  finalCode?: boolean
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["testSession"]>
 
 export type TestSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   applicationId?: boolean
+  scenarioId?: boolean
   startTime?: boolean
   endTime?: boolean
+  finalCode?: boolean
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["testSession"]>
 
 export type TestSessionSelectScalar = {
   id?: boolean
   applicationId?: boolean
+  scenarioId?: boolean
   startTime?: boolean
   endTime?: boolean
+  finalCode?: boolean
 }
 
-export type TestSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "applicationId" | "startTime" | "endTime", ExtArgs["result"]["testSession"]>
+export type TestSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "applicationId" | "scenarioId" | "startTime" | "endTime" | "finalCode", ExtArgs["result"]["testSession"]>
 export type TestSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
   ideEvents?: boolean | Prisma.TestSession$ideEventsArgs<ExtArgs>
   promptLogs?: boolean | Prisma.TestSession$promptLogsArgs<ExtArgs>
   _count?: boolean | Prisma.TestSessionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TestSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
 }
 export type TestSessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   application?: boolean | Prisma.ApplicationDefaultArgs<ExtArgs>
+  scenario?: boolean | Prisma.TestScenarioDefaultArgs<ExtArgs>
 }
 
 export type $TestSessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TestSession"
   objects: {
     application: Prisma.$ApplicationPayload<ExtArgs>
+    scenario: Prisma.$TestScenarioPayload<ExtArgs>
     ideEvents: Prisma.$IdeEventPayload<ExtArgs>[]
     promptLogs: Prisma.$PromptLogPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     applicationId: string
+    scenarioId: string
     startTime: Date | null
     endTime: Date | null
+    finalCode: runtime.JsonValue | null
   }, ExtArgs["result"]["testSession"]>
   composites: {}
 }
@@ -1012,6 +1239,7 @@ readonly fields: TestSessionFieldRefs;
 export interface Prisma__TestSessionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   application<T extends Prisma.ApplicationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ApplicationDefaultArgs<ExtArgs>>): Prisma.Prisma__ApplicationClient<runtime.Types.Result.GetResult<Prisma.$ApplicationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  scenario<T extends Prisma.TestScenarioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestScenarioDefaultArgs<ExtArgs>>): Prisma.Prisma__TestScenarioClient<runtime.Types.Result.GetResult<Prisma.$TestScenarioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   ideEvents<T extends Prisma.TestSession$ideEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestSession$ideEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IdeEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   promptLogs<T extends Prisma.TestSession$promptLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestSession$promptLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PromptLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1045,8 +1273,10 @@ export interface Prisma__TestSessionClient<T, Null = never, ExtArgs extends runt
 export interface TestSessionFieldRefs {
   readonly id: Prisma.FieldRef<"TestSession", 'String'>
   readonly applicationId: Prisma.FieldRef<"TestSession", 'String'>
+  readonly scenarioId: Prisma.FieldRef<"TestSession", 'String'>
   readonly startTime: Prisma.FieldRef<"TestSession", 'DateTime'>
   readonly endTime: Prisma.FieldRef<"TestSession", 'DateTime'>
+  readonly finalCode: Prisma.FieldRef<"TestSession", 'Json'>
 }
     
 

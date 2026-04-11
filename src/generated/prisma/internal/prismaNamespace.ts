@@ -391,7 +391,8 @@ export const ModelName = {
   TestSession: 'TestSession',
   IdeEvent: 'IdeEvent',
   PromptLog: 'PromptLog',
-  AssessmentReport: 'AssessmentReport'
+  AssessmentReport: 'AssessmentReport',
+  TestScenario: 'TestScenario'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -407,7 +408,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "jobDescription" | "application" | "testSession" | "ideEvent" | "promptLog" | "assessmentReport"
+    modelProps: "user" | "session" | "jobDescription" | "application" | "testSession" | "ideEvent" | "promptLog" | "assessmentReport" | "testScenario"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1003,6 +1004,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    TestScenario: {
+      payload: Prisma.$TestScenarioPayload<ExtArgs>
+      fields: Prisma.TestScenarioFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TestScenarioFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TestScenarioFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        findFirst: {
+          args: Prisma.TestScenarioFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TestScenarioFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        findMany: {
+          args: Prisma.TestScenarioFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>[]
+        }
+        create: {
+          args: Prisma.TestScenarioCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        createMany: {
+          args: Prisma.TestScenarioCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TestScenarioCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>[]
+        }
+        delete: {
+          args: Prisma.TestScenarioDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        update: {
+          args: Prisma.TestScenarioUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        deleteMany: {
+          args: Prisma.TestScenarioDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TestScenarioUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TestScenarioUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>[]
+        }
+        upsert: {
+          args: Prisma.TestScenarioUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TestScenarioPayload>
+        }
+        aggregate: {
+          args: Prisma.TestScenarioAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTestScenario>
+        }
+        groupBy: {
+          args: Prisma.TestScenarioGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TestScenarioGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TestScenarioCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TestScenarioCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1074,6 +1149,8 @@ export const JobDescriptionScalarFieldEnum = {
   id: 'id',
   title: 'title',
   content: 'content',
+  hrEmail: 'hrEmail',
+  creatorId: 'creatorId',
   createdAt: 'createdAt'
 } as const
 
@@ -1095,8 +1172,10 @@ export type ApplicationScalarFieldEnum = (typeof ApplicationScalarFieldEnum)[key
 export const TestSessionScalarFieldEnum = {
   id: 'id',
   applicationId: 'applicationId',
+  scenarioId: 'scenarioId',
   startTime: 'startTime',
-  endTime: 'endTime'
+  endTime: 'endTime',
+  finalCode: 'finalCode'
 } as const
 
 export type TestSessionScalarFieldEnum = (typeof TestSessionScalarFieldEnum)[keyof typeof TestSessionScalarFieldEnum]
@@ -1137,6 +1216,20 @@ export const AssessmentReportScalarFieldEnum = {
 export type AssessmentReportScalarFieldEnum = (typeof AssessmentReportScalarFieldEnum)[keyof typeof AssessmentReportScalarFieldEnum]
 
 
+export const TestScenarioScalarFieldEnum = {
+  id: 'id',
+  jobId: 'jobId',
+  title: 'title',
+  difficulty: 'difficulty',
+  timeLimit: 'timeLimit',
+  context: 'context',
+  initialCode: 'initialCode',
+  createdAt: 'createdAt'
+} as const
+
+export type TestScenarioScalarFieldEnum = (typeof TestScenarioScalarFieldEnum)[keyof typeof TestScenarioScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1145,19 +1238,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -1262,20 +1355,6 @@ export type ListEnumAppStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
 
 
 /**
- * Reference to a field of type 'EventType'
- */
-export type EnumEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventType'>
-    
-
-
-/**
- * Reference to a field of type 'EventType[]'
- */
-export type ListEnumEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventType[]'>
-    
-
-
-/**
  * Reference to a field of type 'Json'
  */
 export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
@@ -1286,6 +1365,20 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'EventType'
+ */
+export type EnumEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventType'>
+    
+
+
+/**
+ * Reference to a field of type 'EventType[]'
+ */
+export type ListEnumEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventType[]'>
     
 
 
@@ -1405,6 +1498,7 @@ export type GlobalOmitConfig = {
   ideEvent?: Prisma.IdeEventOmit
   promptLog?: Prisma.PromptLogOmit
   assessmentReport?: Prisma.AssessmentReportOmit
+  testScenario?: Prisma.TestScenarioOmit
 }
 
 /* Types for Logging */

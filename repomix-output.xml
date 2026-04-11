@@ -1,0 +1,1769 @@
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: src
+- Files matching these patterns are excluded: src/generated, *.spec.ts
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/app.controller.spec.ts
+src/app.controller.ts
+src/app.module.ts
+src/app.service.ts
+src/main.ts
+src/routes/ai/ai-cv-screening.service.ts
+src/routes/ai/ai.controller.ts
+src/routes/ai/ai.module.ts
+src/routes/ai/ai.service.ts
+src/routes/application/application.controller.spec.ts
+src/routes/application/application.controller.ts
+src/routes/application/application.module.ts
+src/routes/application/application.service.spec.ts
+src/routes/application/application.service.ts
+src/routes/auth/auth.controller.ts
+src/routes/auth/auth.model.ts
+src/routes/auth/auth.module.ts
+src/routes/auth/auth.repository.ts
+src/routes/auth/auth.service.ts
+src/routes/auth/github.strategy.ts
+src/routes/dashboard/dashboard.controller.ts
+src/routes/dashboard/dashboard.module.ts
+src/routes/dashboard/dashboard.service.ts
+src/routes/job/job.controller.ts
+src/routes/job/job.dto.ts
+src/routes/job/job.module.ts
+src/routes/job/job.service.ts
+src/routes/test/test.controller.ts
+src/routes/test/test.module.ts
+src/routes/test/test.service.ts
+src/shared/config.ts
+src/shared/constants/auth.contant.ts
+src/shared/constants/prompt.constant.ts
+src/shared/decorators/auth.decorator.ts
+src/shared/decorators/role.decorator.ts
+src/shared/guards/authentication.guard.ts
+src/shared/guards/jwt.guard.ts
+src/shared/guards/role.guard.ts
+src/shared/interceptor/transform.intereptor.ts
+src/shared/pipes/zod-validator.pipe.ts
+src/shared/services/jwt.service.ts
+src/shared/services/prisma.service.ts
+src/shared/shared.module.ts
+src/shared/types/jwt.type.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/routes/ai/ai-cv-screening.service.ts">
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import envConfig from 'src/shared/config';
+
+@Injectable()
+export class CvScreeningService {
+  private readonly logger = new Logger(CvScreeningService.name);
+  private genAI: GoogleGenerativeAI;
+
+  constructor(private prisma: PrismaService) {
+    this.genAI = new GoogleGenerativeAI(envConfig.SECRET_API_KEY);
+  }
+
+  // Hàm này biến văn bản thành Vector (Dãy 768 con số)
+  async generateEmbedding(text: string): Promise<number[]> {
+    const model = this.genAI.getGenerativeModel({
+      model: 'text-embedding-004',
+    });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
+  }
+
+  // Hàm "Trùm Cuối": Chấm điểm CV so với JD
+  async evaluateCvMatching(applicationId: string) {
+    try {
+      // 1. Lấy thông tin Đơn ứng tuyển và JD
+      const application = await this.prisma.application.findUnique({
+        where: { id: applicationId },
+        include: { job: true },
+      });
+
+      if (!application) throw new Error('Application not found');
+
+      // 2. Gọi Google AI để nhúng (embed) nội dung CV thành Vector
+      this.logger.log(`Đang phân tích Vector cho CV ID: ${applicationId}`);
+      const cvVector = await this.generateEmbedding(application.cvText);
+      const vectorString = `[${cvVector.join(',')}]`; // Ép kiểu mảng thành string chuẩn của pgvector
+
+      // 3. Lưu Vector CV xuống Database bằng Raw SQL
+      // Do Prisma không hỗ trợ ghi đè kiểu Unsupported trực tiếp qua ORM
+      await this.prisma.$executeRawUnsafe(`
+        UPDATE "Application" 
+        SET "cvEmbedding" = '${vectorString}'::vector 
+        WHERE id = '${applicationId}'
+      `);
+
+      // 4. Tính toán độ phù hợp (Cosine Similarity) giữa CV và JD
+      // Toán tử <=> trong pgvector tính Khoảng Cách Cosine.
+      // Độ tương đồng = 1 - Khoảng cách.
+      const matchResult: any = await this.prisma.$queryRawUnsafe(`
+        SELECT 1 - ("cvEmbedding" <=> (SELECT "embedding" FROM "JobDescription" WHERE id = '${application.jobId}')) AS similarity
+        FROM "Application"
+        WHERE id = '${applicationId}'
+      `);
+
+      // 5. Cập nhật Match Score vào Application
+      const similarityScore = matchResult[0]?.similarity;
+      let finalScore = 0;
+
+      if (similarityScore) {
+        // Đổi từ hệ số (0-1) sang thang điểm 100%
+        finalScore = Math.round(similarityScore * 100 * 100) / 100;
+
+        await this.prisma.application.update({
+          where: { id: applicationId },
+          data: {
+            matchScore: finalScore,
+            status: finalScore > 70 ? 'TESTING' : 'REJECTED', // Ví dụ: > 70 điểm thì cho đi Test IDE
+          },
+        });
+      }
+
+      this.logger.log(`Hoàn tất! Điểm phù hợp CV: ${finalScore}%`);
+      return finalScore;
+    } catch (error) {
+      this.logger.error('Lỗi khi chấm điểm CV:', error);
+      throw error;
+    }
+  }
+}
+</file>
+
+<file path="src/routes/ai/ai.controller.ts">
+import { Controller } from '@nestjs/common';
+
+@Controller('ai')
+export class AiController {}
+</file>
+
+<file path="src/routes/ai/ai.module.ts">
+import { Module } from '@nestjs/common';
+import { AiService } from './ai.service';
+import { AiController } from './ai.controller';
+
+@Module({
+  providers: [AiService],
+  controllers: [AiController]
+})
+export class AiModule {}
+</file>
+
+<file path="src/routes/ai/ai.service.ts">
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AiService {}
+</file>
+
+<file path="src/routes/application/application.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { ApplicationController } from './application.controller';
+
+describe('ApplicationController', () => {
+  let controller: ApplicationController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ApplicationController],
+    }).compile();
+
+    controller = module.get<ApplicationController>(ApplicationController);
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+});
+</file>
+
+<file path="src/routes/application/application.controller.ts">
+import { Controller, Get, Request } from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+// Lưu ý: Không cần khai báo @UseGuards vì AuthenticationGuard của ông
+// đã được cấu hình "Secure by default" (khóa mặc định bằng Bearer Token) rồi!
+
+@Controller('application')
+export class ApplicationController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get('my-tests')
+  async getMyApplications(@Request() req) {
+    // ID của user thường nằm trong trường 'sub' của payload JWT
+    const userId = req.user.sub;
+
+    const apps = await this.prisma.application.findMany({
+      where: { userId: userId },
+      select: {
+        id: true,
+        status: true,
+        job: { select: { title: true } },
+        testSession: {
+          select: {
+            id: true,
+            scenario: {
+              select: {
+                title: true,
+                difficulty: true,
+                timeLimit: true,
+                context: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { status: 'asc' }, // Ưu tiên những bài đang ở trạng thái TESTING lên đầu
+    });
+
+    return apps;
+  }
+}
+</file>
+
+<file path="src/routes/application/application.module.ts">
+import { Module } from '@nestjs/common';
+import { ApplicationController } from './application.controller';
+import { ApplicationService } from './application.service';
+
+@Module({
+  controllers: [ApplicationController],
+  providers: [ApplicationService]
+})
+export class ApplicationModule {}
+</file>
+
+<file path="src/routes/application/application.service.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { ApplicationService } from './application.service';
+
+describe('ApplicationService', () => {
+  let service: ApplicationService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [ApplicationService],
+    }).compile();
+
+    service = module.get<ApplicationService>(ApplicationService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+});
+</file>
+
+<file path="src/routes/application/application.service.ts">
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class ApplicationService {}
+</file>
+
+<file path="src/routes/dashboard/dashboard.controller.ts">
+import {
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+  Req,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { DashboardService } from './dashboard.service';
+import { AuthGuard } from '@nestjs/passport';
+import { Roles } from 'src/shared/decorators/role.decorator';
+import { RolesGuard } from 'src/shared/guards/role.guard';
+@Controller('dashboard')
+@UseGuards(AuthGuard('jwt'))
+export class DashboardController {
+  constructor(private readonly dashboardService: DashboardService) {}
+
+  @Get('my-jobs')
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  async getMyJobs(
+    @Req() req: Request & { user: { email: string } },
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    const userEmail = req.user.email;
+    return this.dashboardService.getHrJobs(userEmail, page, limit);
+  }
+
+  @Get('jobs/:jobId/leaderboard')
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  async getLeaderboard(
+    @Param('jobId') jobId: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.dashboardService.getJobLeaderboard(jobId, page, limit);
+  }
+}
+</file>
+
+<file path="src/routes/dashboard/dashboard.module.ts">
+import { Module } from '@nestjs/common';
+import { DashboardService } from './dashboard.service';
+import { DashboardController } from './dashboard.controller';
+
+@Module({
+  providers: [DashboardService],
+  controllers: [DashboardController],
+})
+export class DashboardModule {}
+</file>
+
+<file path="src/routes/dashboard/dashboard.service.ts">
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+
+@Injectable()
+export class DashboardService {
+  constructor(private prisma: PrismaService) {}
+
+  async getHrJobs(hrEmail: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [totalItems, jobs] = await this.prisma.$transaction([
+      this.prisma.jobDescription.count({ where: { hrEmail } }),
+      this.prisma.jobDescription.findMany({
+        where: { hrEmail },
+        orderBy: { createdAt: 'desc' },
+        skip: skip,
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          _count: { select: { applications: true } },
+        },
+      }),
+    ]);
+
+    return {
+      meta: {
+        totalItems,
+        itemCount: jobs.length,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+      },
+      items: jobs,
+    };
+  }
+
+  async getJobLeaderboard(jobId: string, page: number, limit: number) {
+    const job = await this.prisma.jobDescription.findUnique({
+      where: { id: jobId },
+      select: { title: true },
+    });
+
+    if (!job) throw new NotFoundException('Không tìm thấy Job này');
+
+    const skip = (page - 1) * limit;
+
+    const [totalItems, candidates] = await this.prisma.$transaction([
+      this.prisma.application.count({ where: { jobId } }),
+      this.prisma.application.findMany({
+        where: { jobId },
+        orderBy: { matchScore: 'desc' }, // Vẫn giữ nguyên logic AI xếp hạng cao xuống thấp
+        skip: skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+              avatarUrl: true,
+              githubUsername: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      jobTitle: job.title,
+      meta: {
+        totalItems,
+        itemCount: candidates.length,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+      },
+      leaderboard: candidates,
+    };
+  }
+}
+</file>
+
+<file path="src/routes/job/job.controller.ts">
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+// src/jobs/jobs.controller.ts
+import { Controller, Post, Body, Get } from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import type { CreateJobWithScenarioDto } from './job.dto';
+
+@Controller('jobs')
+export class JobsController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getJobs() {
+    return this.prisma.jobDescription.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { applications: true }, // Đếm số lượng hồ sơ để hiện lên UI
+        },
+      },
+    });
+  }
+
+  @Post()
+  async createJobAndScenario(@Body() dto: CreateJobWithScenarioDto) {
+    // Logic Transaction lưu xuống DB giữ nguyên
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Trong file job.controller.ts của NestJS
+      const job = await tx.jobDescription.create({
+        data: {
+          title: dto.title,
+          content: dto.content,
+          // Nếu rỗng thì ép về null để Prisma bỏ qua check Unique
+          hrEmail: dto.hrEmail ? dto.hrEmail : null,
+        },
+      });
+
+      const scenario = await tx.testScenario.create({
+        data: {
+          jobId: job.id,
+          title: dto.scenarioTitle,
+          difficulty: dto.difficulty,
+          timeLimit: dto.timeLimit,
+          context: dto.scenarioContext,
+          initialCode: {},
+        },
+      });
+
+      return { job, scenario };
+    });
+
+    return { message: 'Tạo chiến dịch và đề thi thành công!', data: result };
+  }
+}
+</file>
+
+<file path="src/routes/job/job.dto.ts">
+import { z } from 'zod';
+
+export enum difficultyEnum {
+  INTERN = 'Intern',
+  JUNIOR = 'Junior',
+  MID_LEVEL = 'Mid-level',
+  SENIOR = 'Senior',
+}
+
+export const createJobWithScenarioSchema = z.object({
+  title: z.string().min(5, 'Tiêu đề chiến dịch phải có ít nhất 5 ký tự'),
+  content: z.string().min(50, 'Nội dung JD cần ít nhất 50 ký tự'),
+  hrEmail: z.string().email('Định dạng email không hợp lệ').optional(),
+
+  // --- Thông tin đính kèm cho bài Test ---
+  scenarioTitle: z.string().min(5, 'Tiêu đề bài thi quá ngắn'),
+  difficulty: z.enum([
+    difficultyEnum.INTERN,
+    difficultyEnum.JUNIOR,
+    difficultyEnum.MID_LEVEL,
+    difficultyEnum.SENIOR,
+  ]),
+  timeLimit: z.number().int().min(10, 'Thời gian làm bài tối thiểu là 10 phút'),
+  scenarioContext: z.string().min(10, 'Bối cảnh (Context) không được để trống'),
+});
+
+export type CreateJobWithScenarioDto = z.infer<
+  typeof createJobWithScenarioSchema
+>;
+</file>
+
+<file path="src/routes/job/job.module.ts">
+import { Module } from '@nestjs/common';
+import { JobService } from './job.service';
+import { JobsController } from './job.controller';
+import { SharedModule } from 'src/shared/shared.module';
+
+@Module({
+  imports: [SharedModule],
+  providers: [JobService],
+  controllers: [JobsController],
+})
+export class JobModule {}
+</file>
+
+<file path="src/routes/job/job.service.ts">
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import envConfig from 'src/shared/config';
+
+@Injectable()
+export class JobService {
+  private readonly logger = new Logger(JobService.name);
+  private genAI: GoogleGenerativeAI;
+
+  constructor(private prisma: PrismaService) {
+    this.genAI = new GoogleGenerativeAI(envConfig.SECRET_API_KEY);
+  }
+
+  // Hàm chuyển đổi văn bản thành Vector
+  async generateEmbedding(text: string): Promise<number[]> {
+    const model = this.genAI.getGenerativeModel({
+      model: 'text-embedding-004',
+    });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
+  }
+
+  async createJob(title: string, content: string, hrEmail: string) {
+    this.logger.log(`Đang tạo Job Description: ${title}`);
+
+    // Tạo bản ghi Job trong PostgreSQL trước để lấy ID
+    const newJob = await this.prisma.jobDescription.create({
+      data: {
+        title,
+        content,
+        hrEmail,
+      },
+    });
+
+    try {
+      // Gọi Gemini nhúng nội dung JD thành Vector
+      this.logger.log('Đang tạo Vector Embedding cho nội dung JD...');
+      const embeddingVector = await this.generateEmbedding(content);
+      const vectorString = `[${embeddingVector.join(',')}]`; // Định dạng mảng chuẩn của pgvector
+
+      // Dùng Raw SQL để ép kiểu cập nhật cột Unsupported("vector")
+      await this.prisma.$executeRawUnsafe(`
+        UPDATE "JobDescription" 
+        SET "embedding" = '${vectorString}'::vector 
+        WHERE id = '${newJob.id}'
+      `);
+
+      this.logger.log('Tạo Job và lưu Vector thành công!');
+
+      // Nhờ có TransformInterceptor, bạn chỉ cần return object đơn giản thế này thôi
+      return {
+        id: newJob.id,
+        title: newJob.title,
+        message: 'Tạo bài tuyển dụng và nhúng AI thành công',
+      };
+    } catch (error) {
+      this.logger.error('Lỗi khi gọi API nhúng Vector:', error);
+      // Nếu lỗi AI, có thể job vẫn tạo thành công nhưng không có vector, bạn có thể xử lý rollback nếu cần
+      throw new InternalServerErrorException(
+        'Lỗi hệ thống khi phân tích Vector cho JD',
+      );
+    }
+  }
+}
+</file>
+
+<file path="src/routes/test/test.controller.ts">
+import {
+  Controller,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Post,
+  Get,
+  Request,
+} from '@nestjs/common';
+import { TestService } from './test.service';
+import { Roles } from 'src/shared/decorators/role.decorator';
+import { RolesGuard } from 'src/shared/guards/role.guard';
+import { PrismaService } from 'src/shared/services/prisma.service';
+// import { RolesGuard } from '../auth/guards/roles.guard';
+// import { Roles } from '../auth/decorators/roles.decorator';
+
+@Controller('tests')
+export class TestsController {
+  constructor(
+    private readonly testsService: TestService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  @Patch(':id/rename')
+  @UseGuards(RolesGuard)
+  @Roles('HR', 'TECH_LEAD') // Chỉ HR/Tech Lead mới được đổi tên đề thi
+  async renameTest(
+    @Param('id') sessionId: string,
+    @Body('title') newTitle: string,
+  ) {
+    return this.testsService.renameTestScenario(sessionId, newTitle);
+  }
+
+  @Post(':id/submit')
+  async submitTest(@Param('id') sessionId: string) {
+    return this.testsService.submitAndTriggerGrading(sessionId);
+  }
+
+  @Get('my-tests')
+  // @UseGuards(JwtAuthGuard)
+  async getMyApplications(@Request() req) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const userId = req.user.id; // Lấy từ token đăng nhập
+
+    const apps = await this.prisma.application.findMany({
+      where: { userId: userId },
+      select: {
+        id: true,
+        status: true,
+        job: { select: { title: true } },
+        testSession: {
+          select: {
+            id: true,
+            scenario: {
+              select: {
+                title: true,
+                difficulty: true,
+                timeLimit: true,
+                context: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { status: 'asc' }, // Ưu tiên xếp TESTING lên đầu
+    });
+
+    return apps;
+  }
+}
+</file>
+
+<file path="src/routes/test/test.module.ts">
+import { Module } from '@nestjs/common';
+import { TestService } from './test.service';
+import { TestsController } from './test.controller';
+import { SharedModule } from 'src/shared/shared.module';
+
+@Module({
+  imports: [SharedModule],
+  providers: [TestService],
+  controllers: [TestsController],
+})
+export class TestModule {}
+</file>
+
+<file path="src/routes/test/test.service.ts">
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+
+@Injectable()
+export class TestService {
+  constructor(private prisma: PrismaService) {}
+
+  async renameTestScenario(sessionId: string, newTitle: string) {
+    if (!newTitle || newTitle.trim() === '') {
+      throw new BadRequestException('Tiêu đề không được để trống');
+    }
+
+    // 1. Tìm phiên thi để lấy ID của Scenario
+    const session = await this.prisma.testSession.findUnique({
+      where: { id: sessionId },
+      select: { scenarioId: true },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Không tìm thấy phiên làm bài này');
+    }
+
+    // 2. Cập nhật tên của TestScenario
+    const updatedScenario = await this.prisma.testScenario.update({
+      where: { id: session.scenarioId },
+      data: { title: newTitle },
+    });
+
+    return {
+      message: 'Đổi tên thành công',
+      scenario: updatedScenario,
+    };
+  }
+
+  async submitAndTriggerGrading(sessionId: string) {
+    // 1. Lấy thông tin session và đóng băng phiên làm bài
+    const session = await this.prisma.testSession.update({
+      where: { id: sessionId },
+      data: {
+        endTime: new Date(), // Chốt thời gian nộp bài
+      },
+      include: {
+        application: true, // Join bảng Application để đổi trạng thái
+      },
+    });
+
+    // 2. Cập nhật trạng thái của Application sang AI Đang Chấm (REVIEWING)
+    await this.prisma.application.update({
+      where: { id: session.applicationId },
+      data: {
+        status: 'REVIEWING', // Dùng đúng enum AppStatus bạn đã định nghĩa
+      },
+    });
+
+    // 3. Kích hoạt Agentic AI chạy ngầm (Chỗ này bạn sẽ gọi logic LangChain/Gemini)
+    // Lưu ý: Dùng async/await mà không cần return cái này ra Frontend để ứng viên không phải đợi AI chạy xong.
+    // this.triggerAgenticAIGrading(sessionId).catch((err) => {
+    //   console.error('Lỗi khi AI chấm bài tự động:', err);
+    // });
+
+    return {
+      message: 'Nộp bài thành công. Luồng chấm điểm AI đã được kích hoạt.',
+    };
+  }
+
+  //   // Hàm private giả lập luồng gọi Gemini
+  //   private async triggerAgenticAIGrading(sessionId: string) {
+  //     console.log(
+  //       `[Agentic AI] Đang phân tích mã nguồn cho phiên ${sessionId}...`,
+  //     );
+  // TODO: Implement logic gửi finalCode, promptLogs, ideEvents vào Gemini 3.1 Pro ở đây
+  //   }
+}
+</file>
+
+<file path="src/shared/constants/auth.contant.ts">
+export const REQUEST_USER_KEY = 'user';
+
+export const AuthType = {
+  Bearer: 'Bearer',
+  None: 'None',
+  APIKey: 'ApiKey',
+} as const;
+
+export type AuthTypeType = (typeof AuthType)[keyof typeof AuthType];
+
+export const ConditionGuard = {
+  And: 'and',
+  Or: 'or',
+} as const;
+
+export type ConditionGuardType =
+  (typeof ConditionGuard)[keyof typeof ConditionGuard];
+
+export const UserStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  BLOCKED: 'BLOCKED',
+} as const;
+
+export const TypeOfVerificationCode = {
+  LOGIN: 'LOGIN',
+} as const;
+
+export type TypeOfVerificationCodeType =
+  (typeof TypeOfVerificationCode)[keyof typeof TypeOfVerificationCode];
+
+export const RoleType = {
+  CANDIDATE: 'CANDIDATE',
+  HR: 'HR',
+  TECH_LEAD: 'TECH_LEAD',
+} as const;
+
+export type RoleTypeType = (typeof RoleType)[keyof typeof RoleType];
+</file>
+
+<file path="src/shared/constants/prompt.constant.ts">
+
+</file>
+
+<file path="src/shared/decorators/auth.decorator.ts">
+import { SetMetadata } from '@nestjs/common';
+import {
+  AuthTypeType,
+  AuthType,
+  ConditionGuard,
+  ConditionGuardType,
+} from '../constants/auth.contant';
+
+export const AUTH_TYPE_KEY = 'authType';
+
+export type AuthTypeDecoratorPayload = {
+  authTypes: AuthTypeType[];
+  options: { condition: ConditionGuardType };
+};
+
+export const Auth = (
+  authTypes: AuthTypeType[],
+  options?: { condition: ConditionGuardType },
+) => {
+  return SetMetadata(AUTH_TYPE_KEY, {
+    authTypes,
+    options: options ?? { condition: ConditionGuard.And },
+  });
+};
+
+export const IsPublic = () => Auth([AuthType.None]);
+</file>
+
+<file path="src/shared/decorators/role.decorator.ts">
+import { SetMetadata } from '@nestjs/common';
+import { RoleTypeType } from '../constants/auth.contant';
+
+export const ROLES_KEY = 'roles';
+
+export const Roles = (...roles: RoleTypeType[]) =>
+  SetMetadata(ROLES_KEY, roles);
+</file>
+
+<file path="src/shared/guards/authentication.guard.ts">
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthType, ConditionGuard } from '../constants/auth.contant';
+import { AccessTokenGuard } from './jwt.guard';
+import {
+  AUTH_TYPE_KEY,
+  AuthTypeDecoratorPayload,
+} from '../decorators/auth.decorator';
+
+@Injectable()
+export class AuthenticationGuard implements CanActivate {
+  private readonly authTypeGuardMap: Record<string, CanActivate>;
+
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly accessTokenGuard: AccessTokenGuard,
+  ) {
+    this.authTypeGuardMap = {
+      [AuthType.Bearer]: this.accessTokenGuard,
+      [AuthType.None]: { canActivate: () => true },
+    };
+  }
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const authTypeValue = this.reflector.getAllAndOverride<
+      AuthTypeDecoratorPayload | undefined
+    >(AUTH_TYPE_KEY, [context.getHandler(), context.getClass()]) ?? {
+      authTypes: [AuthType.Bearer],
+      options: { condition: ConditionGuard.And },
+    };
+
+    const guards = authTypeValue.authTypes.map(
+      (authType) => this.authTypeGuardMap[authType],
+    );
+
+    if (authTypeValue.options.condition === ConditionGuard.Or) {
+      let error = new UnauthorizedException();
+      for (const instance of guards) {
+        const canActivate = await Promise.resolve(
+          instance.canActivate(context),
+        ).catch((err) => {
+          error = err;
+          return false;
+        });
+        if (canActivate) {
+          return true;
+        }
+      }
+      throw error;
+    } else {
+      for (const instance of guards) {
+        const canActivate = await instance.canActivate(context);
+        if (!canActivate) {
+          throw new UnauthorizedException();
+        }
+      }
+      return true;
+    }
+  }
+}
+</file>
+
+<file path="src/shared/guards/jwt.guard.ts">
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { ExecutionContext, Injectable, CanActivate } from '@nestjs/common';
+import { REQUEST_USER_KEY } from '../constants/auth.contant';
+import { JwtAuthService } from '../services/jwt.service';
+@Injectable()
+export class AccessTokenGuard implements CanActivate {
+  constructor(private readonly JwtAuthService: JwtAuthService) {}
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers.authorization;
+    const accessToken =
+      typeof authHeader === 'string' ? authHeader.split(' ')[1] : undefined;
+    if (!accessToken) {
+      return false;
+    }
+    try {
+      const decodedAccessToken =
+        await this.JwtAuthService.verifyAccessToken(accessToken);
+      request[REQUEST_USER_KEY] = decodedAccessToken;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+// Dùng cho kiểm tra access token trong request, sử dụng bằng cách thêm decorator @UseGuard(AuthGuard)
+</file>
+
+<file path="src/shared/guards/role.guard.ts">
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { REQUEST_USER_KEY, RoleTypeType } from '../constants/auth.contant';
+import { ROLES_KEY } from '../decorators/role.decorator';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    // 1. Lấy danh sách Roles được yêu cầu từ Decorator (vd: ['HR', 'TECH_LEAD'])
+    const requiredRoles = this.reflector.getAllAndOverride<RoleTypeType[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    // 2. Nếu API không gắn @Roles() -> Không yêu cầu quyền đặc biệt -> Cho qua
+    if (!requiredRoles) {
+      return true;
+    }
+
+    // 3. Lấy thông tin User từ Request
+    // (Lưu ý: User này đã được AccessTokenGuard/AuthenticationGuard giải mã và nhét sẵn vào request từ bước trước)
+    const request = context
+      .switchToHttp()
+      .getRequest<Record<string, unknown>>();
+    const user = request[REQUEST_USER_KEY] as
+      | { role: RoleTypeType }
+      | undefined;
+
+    // 4. Đề phòng rủi ro: Nếu không có user -> Chặn
+    if (!user) {
+      throw new ForbiddenException('Chưa xác thực thông tin người dùng');
+    }
+
+    // 5. Kiểm tra xem role của user (vd: CANDIDATE) có nằm trong mảng requiredRoles không?
+    const hasRole = requiredRoles.includes(user.role);
+
+    if (!hasRole) {
+      throw new ForbiddenException(
+        'Bạn không có đủ thẩm quyền để truy cập tài nguyên này',
+      );
+    }
+
+    return true;
+  }
+}
+</file>
+
+<file path="src/shared/interceptor/transform.intereptor.ts">
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { Response as ExpressResponse } from 'express';
+
+export interface Response<T> {
+  statusCode: number;
+  message: string;
+  data?: T;
+}
+
+@Injectable()
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  Response<T>
+> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<Response<T>> {
+    return next.handle().pipe(
+      map((res: any): Response<T> => {
+        const ctx = context.switchToHttp();
+        const response = ctx.getResponse<ExpressResponse>();
+        const statusCode = response.statusCode;
+
+        // Trường hợp 1: Controller không trả về gì (VD: Delete thành công)
+        if (res === undefined || res === null) {
+          return { statusCode, message: 'Success' };
+        }
+
+        // Trường hợp 2: Controller chủ động trả về { message: '...', data: ... }
+        if (
+          typeof res === 'object' &&
+          'message' in res &&
+          typeof res.message === 'string'
+        ) {
+          const formattedResponse: Response<T> = {
+            statusCode,
+            message: res.message,
+          };
+
+          // Chỉ gắn thêm 'data' nếu Controller thực sự có truyền 'data'
+          if ('data' in res && res.data !== undefined) {
+            formattedResponse.data = res.data;
+          }
+          return formattedResponse;
+        }
+
+        // Trường hợp 3: Controller trả về Data thuần túy (Mảng, Object User, String,...)
+        return {
+          statusCode,
+          message: 'Success',
+          data: res,
+        };
+      }),
+    );
+  }
+}
+</file>
+
+<file path="src/shared/pipes/zod-validator.pipe.ts">
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { UnprocessableEntityException } from '@nestjs/common';
+import { createZodValidationPipe } from 'nestjs-zod';
+import { ZodError } from 'zod'; // Bắt buộc phải import lại ZodError
+
+const CustomZodValidationPipe = createZodValidationPipe({
+  createValidationException: (error) => {
+    // Ép kiểu (Type Assertion) error thành ZodError ở ngay đây
+    const zodError = error as ZodError;
+    const issues = zodError?.issues || [];
+
+    const formattedErrors = issues.map((issue) => ({
+      field: issue.path.length > 0 ? issue.path.join('.') : 'root',
+      message: issue.message,
+    }));
+
+    return new UnprocessableEntityException({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      message: 'Dữ liệu đầu vào không hợp lệ',
+      details: formattedErrors,
+    });
+  },
+});
+
+export default CustomZodValidationPipe;
+</file>
+
+<file path="src/shared/services/jwt.service.ts">
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import envConfig from '../config';
+import {
+  AccessTokenPayLoad,
+  AccessTokenPayloadCreate,
+  RefreshTokenPayload,
+  RefreshTokenPayloadCreate,
+} from '../types/jwt.type';
+import { v4 as uuidv4 } from 'uuid';
+
+@Injectable()
+export class JwtAuthService {
+  constructor(private readonly jwtService: JwtService) {}
+
+  /**
+   * Generates a pair of access and refresh tokens.
+   * @param userId The user's ID.
+   * @param email The user's email.
+   * @returns A promise that resolves to an object with accessToken and refreshToken.
+   */
+  // async generateTokens(userId: number, email: string) {
+  //   const payload = { sub: userId, email };
+  //   const [accessToken, refreshToken] = await Promise.all([
+  //     this.jwtService.signAsync(payload, {
+  //       secret: envConfig.ACCESS_TOKEN_SECRET,
+  //       expiresIn: envConfig.ACCESS_TOKEN_EXPIRES_IN as any,
+  //     }),
+  //     this.jwtService.signAsync(payload, {
+  //       secret: envConfig.REFRESH_TOKEN_SECRET,
+  //       expiresIn: envConfig.REFRESH_TOKEN_EXPIRES_IN as any,
+  //     }),
+  //   ]);
+
+  //   return {
+  //     accessToken,
+  //     refreshToken,
+  //   };
+  // }
+
+  async verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
+    return this.jwtService.verifyAsync(token, {
+      secret: envConfig.REFRESH_TOKEN_SECRET,
+    });
+  }
+
+  async verifyAccessToken(token: string): Promise<AccessTokenPayLoad> {
+    return this.jwtService.verifyAsync(token, {
+      secret: envConfig.ACCESS_TOKEN_SECRET,
+    });
+  }
+
+  async signRefreshToken(payload: RefreshTokenPayloadCreate) {
+    return this.jwtService.signAsync(
+      { ...payload, jti: uuidv4() },
+      {
+        secret: envConfig.REFRESH_TOKEN_SECRET,
+        expiresIn: envConfig.REFRESH_TOKEN_EXPIRES_IN as any,
+      },
+    );
+  }
+
+  async signAccessToken(payload: AccessTokenPayloadCreate) {
+    return this.jwtService.signAsync(
+      { ...payload, jti: uuidv4() },
+      {
+        secret: envConfig.ACCESS_TOKEN_SECRET,
+        expiresIn: envConfig.ACCESS_TOKEN_EXPIRES_IN as any,
+      },
+    );
+  }
+}
+</file>
+
+<file path="src/shared/types/jwt.type.ts">
+type Role = 'CANDIDATE' | 'HR' | 'TECH_LEAD';
+
+export interface AccessTokenPayloadCreate {
+  sub: string;
+  email: string;
+  role: Role;
+}
+
+export interface AccessTokenPayLoad extends AccessTokenPayloadCreate {
+  jti: string;
+  exp: number;
+  iat: number;
+}
+
+export interface RefreshTokenPayloadCreate {
+  sub: string;
+  email: string;
+  role: Role;
+}
+
+export interface RefreshTokenPayload extends RefreshTokenPayloadCreate {
+  jti: string;
+  exp: number;
+  iat: number;
+}
+</file>
+
+<file path="src/app.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+</file>
+
+<file path="src/app.controller.ts">
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+</file>
+
+<file path="src/app.module.ts">
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { SharedModule } from './shared/shared.module';
+import { AuthModule } from './routes/auth/auth.module';
+import { TestModule } from './routes/test/test.module';
+import { APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { AuthenticationGuard } from './shared/guards/authentication.guard';
+import CustomZodValidationPipe from './shared/pipes/zod-validator.pipe';
+import { JobModule } from './routes/job/job.module';
+
+@Module({
+  imports: [SharedModule, AuthModule, TestModule, JobModule],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthenticationGuard,
+    },
+    {
+      provide: APP_PIPE, //global check
+      useClass: CustomZodValidationPipe,
+    },
+  ],
+})
+export class AppModule {}
+</file>
+
+<file path="src/app.service.ts">
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+</file>
+
+<file path="src/main.ts">
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser';
+import { TransformInterceptor } from './shared/interceptor/transform.intereptor';
+
+declare global {
+  interface BigInt {
+    toJSON(): string;
+  }
+}
+
+BigInt.prototype.toJSON = function () {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+  return this.toString();
+};
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
+  app.useGlobalInterceptors(new TransformInterceptor());
+  app.enableCors({
+    origin: process.env.GITHUB_CLIENT_URL || 'http://localhost:3000', // Chỉ định rõ URL của Frontend
+    credentials: true,
+  });
+  await app.listen(process.env.PORT ?? 3001);
+}
+bootstrap();
+</file>
+
+<file path="src/routes/auth/auth.controller.ts">
+import { Controller, Get, Ip, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express'; // <-- Thêm chữ 'type' ở đây
+import { AuthGuard } from '@nestjs/passport';
+import { OAuthProfile } from './auth.model';
+import { AuthService } from './auth.service';
+import { IsPublic } from 'src/shared/decorators/auth.decorator';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  // Kích hoạt luồng đăng nhập GitHub
+  @Get('github')
+  @IsPublic()
+  @UseGuards(AuthGuard('github'))
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async githubAuth(@Req() req) {
+    // Passport tự động chuyển hướng sang trang đăng nhập của GitHub
+  }
+
+  // Hứng dữ liệu từ GitHub trả về
+  @Get('github/callback')
+  @IsPublic()
+  @UseGuards(AuthGuard('github'))
+  async githubAuthRedirect(
+    @Req() req: Request & { user?: OAuthProfile },
+    @Res() res: Response,
+    @Ip() ipAddress: string,
+  ) {
+    const profile = req.user;
+
+    if (profile == undefined) {
+      return res.status(401).send('Unauthorized');
+    }
+    const userAgent = req.get('user-agent') || 'Unknown';
+
+    const { accessToken, refreshToken } =
+      await this.authService.validateOAuthLogin(profile, ipAddress, userAgent);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true, // Cực kỳ quan trọng: JS Frontend không thể đọc được
+      secure: process.env.NODE_ENV === 'production', // Bắt buộc dùng HTTPS khi deploy thật, chạy local (http) thì để false
+      sameSite: 'lax', // Khuyên dùng 'lax' để chống tấn công CSRF mà vẫn mượt mà khi redirect
+      maxAge: 7 * 24 * 60 * 60 * 1000, // Tuổi thọ của cookie
+      path: '/', // Cookie có hiệu lực trên toàn bộ domain
+    });
+
+    return res.redirect(
+      `${process.env.GITHUB_CLIENT_URL}/login/success?accessToken=${accessToken}`,
+    );
+  }
+
+  @Post('logout')
+  async logout(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = req.cookies['refreshToken'];
+
+    if (refreshToken) {
+      await this.authService.logout(refreshToken);
+    }
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return res
+      .status(200)
+      .json({ message: 'Đăng xuất thành công, đã hủy token!' });
+  }
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Ip() ipAddress: string,
+  ) {
+    const refreshTokenCookie = req.cookies['refreshToken'] as string;
+
+    if (!refreshTokenCookie) {
+      return res.status(401).json({ message: 'Refresh token not found' });
+    }
+
+    const userAgent = req.get('user-agent') || 'Unknown';
+
+    const { accessToken, refreshToken } = await this.authService.refresh(
+      refreshTokenCookie,
+      ipAddress,
+      userAgent,
+    );
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return res.json({ accessToken });
+  }
+}
+</file>
+
+<file path="src/routes/auth/auth.model.ts">
+export type OAuthProfile = {
+  email: string;
+  githubId: string;
+  githubUsername: string;
+  name: string;
+  avatarUrl: string;
+};
+</file>
+
+<file path="src/routes/auth/auth.module.ts">
+import { Module } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { GithubStrategy } from './github.strategy';
+import { SharedModule } from 'src/shared/shared.module';
+import { AuthRepository } from './auth.repository';
+
+@Module({
+  imports: [SharedModule],
+  controllers: [AuthController],
+  providers: [AuthService, GithubStrategy, AuthRepository, GithubStrategy],
+})
+export class AuthModule {}
+</file>
+
+<file path="src/routes/auth/auth.repository.ts">
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/shared/services/prisma.service';
+
+@Injectable()
+export class AuthRepository {
+  constructor(private prisma: PrismaService) {}
+
+  async deleteRefreshToken(refreshToken: string) {
+    return this.prisma.session.delete({
+      where: {
+        refreshToken,
+      },
+    });
+  }
+}
+</file>
+
+<file path="src/routes/auth/auth.service.ts">
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtAuthService } from 'src/shared/services/jwt.service';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import { AuthRepository } from './auth.repository';
+import { OAuthProfile } from './auth.model';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtAuthService: JwtAuthService,
+    private authRepository: AuthRepository,
+  ) {}
+
+  async validateOAuthLogin(
+    profile: OAuthProfile,
+    ipAddress: string,
+    userAgent: string,
+  ) {
+    // 1. Tìm hoặc tạo mới User dựa trên githubId (Upsert)
+    const user = await this.prisma.user.upsert({
+      where: { githubId: profile.githubId },
+      update: {
+        name: profile.name,
+        avatarUrl: profile.avatarUrl,
+        githubUsername: profile.githubUsername,
+      },
+      create: {
+        email: profile.email,
+        githubId: profile.githubId,
+        githubUsername: profile.githubUsername,
+        name: profile.name,
+        avatarUrl: profile.avatarUrl,
+        role: 'CANDIDATE',
+      },
+    });
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtAuthService.signAccessToken(payload),
+      this.jwtAuthService.signRefreshToken(payload),
+    ]);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: refreshToken,
+        ipAddress: ipAddress,
+        userAgent: userAgent,
+        expiresAt: expiresAt,
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  async refresh(
+    refreshToken: string,
+    ipAddress: string, // Thêm 2 tham số này để lưu Session mới
+    userAgent: string,
+  ) {
+    try {
+      // 1. Kiểm tra định dạng và chữ ký token (Verify)
+      await this.jwtAuthService.verifyRefreshToken(refreshToken);
+
+      // 2. Xóa token cũ khỏi Database
+      const deletedToken =
+        await this.authRepository.deleteRefreshToken(refreshToken);
+
+      // 3. Kiểm tra xem token có thực sự tồn tại trong DB trước đó không
+      if (!deletedToken) {
+        throw new UnauthorizedException(
+          'Refresh token không tồn tại hoặc đã bị thu hồi',
+        );
+      }
+
+      // 4. TRUY XUẤT LẠI USER TỪ DATABASE (Cách an toàn và chuẩn xác nhất)
+      const user = await this.prisma.user.findUnique({
+        where: { id: deletedToken.userId }, // Dùng userId từ bảng Session để tìm User
+      });
+
+      if (!user) {
+        throw new UnauthorizedException(
+          'Người dùng không còn tồn tại trong hệ thống',
+        );
+      }
+
+      // 5. Tạo Payload MỚI NHẤT
+      const payload = { sub: user.id, email: user.email, role: user.role };
+
+      // 6. Cấp một cặp vé hoàn toàn mới
+      const [newAccessToken, newRefreshToken] = await Promise.all([
+        this.jwtAuthService.signAccessToken(payload),
+        this.jwtAuthService.signRefreshToken(payload),
+      ]);
+
+      // 7. Tính ngày hết hạn cho vé mới
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // 8. Lưu phiên làm việc mới vào Database
+      await this.prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken: newRefreshToken,
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+          expiresAt: expiresAt,
+        },
+      });
+
+      // 9. Trả về cho Controller
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      console.error('Refresh Token Error:', error);
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại',
+      );
+    }
+  }
+
+  async logout(refreshToken) {
+    try {
+      await this.authRepository.deleteRefreshToken(refreshToken);
+    } catch (error) {
+      console.error('Logout Error:', error);
+      throw new UnauthorizedException('Đăng xuất không thành công');
+    }
+  }
+}
+</file>
+
+<file path="src/routes/auth/github.strategy.ts">
+/* eslint-disable @typescript-eslint/require-await */
+import { Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy, Profile } from 'passport-github2';
+import envConfig from '../../shared/config';
+
+@Injectable()
+export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
+  constructor() {
+    super({
+      clientID: envConfig.GITHUB_CLIENT_ID,
+      clientSecret: envConfig.GITHUB_CLIENT_SECRET,
+      callbackURL: envConfig.GITHUB_CLIENT_CALLBACK_URL,
+      scope: ['user:email', 'read:user'],
+    });
+  }
+
+  async validate(accessToken: string, refreshToken: string, profile: Profile) {
+    const { id, username, displayName, photos, emails } = profile;
+
+    // Dữ liệu từ github
+    const userProfile = {
+      githubId: id,
+      githubUsername: username,
+      name: displayName || username,
+      avatarUrl: photos?.[0]?.value,
+      email: emails?.[0]?.value,
+      githubAccessToken: accessToken,
+    };
+
+    return userProfile;
+  }
+}
+</file>
+
+<file path="src/shared/config.ts">
+import { config } from 'dotenv';
+import z from 'zod';
+import fs from 'fs';
+import path from 'path';
+
+// 1. Load file .env
+config({
+  path: '.env',
+});
+
+// 2. Kiểm tra file tồn tại (Dùng đúng tên file .env)
+if (!fs.existsSync(path.resolve('.env'))) {
+  console.error(
+    '❌ Khong tim thay file .env tại đường dẫn:',
+    path.resolve('.env'),
+  );
+  process.exit(1);
+}
+
+// 3. Định nghĩa Schema
+const configSchema = z.object({
+  DATABASE_URL: z.string().min(1),
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+  GITHUB_CLIENT_URL: z.string().min(1),
+  GITHUB_CLIENT_CALLBACK_URL: z.string().min(1),
+  ACCESS_TOKEN_SECRET: z.string().min(1),
+  ACCESS_TOKEN_EXPIRES_IN: z.string().min(1),
+  REFRESH_TOKEN_SECRET: z.string().min(1),
+  REFRESH_TOKEN_EXPIRES_IN: z.string().min(1),
+  SECRET_API_KEY: z.string().min(1),
+});
+
+// 4. Parse và Validate
+const configServer = configSchema.safeParse(process.env);
+
+if (!configServer.success) {
+  // Nếu thất bại: In lỗi chi tiết từ Zod
+  console.error(
+    '❌ Invalid environment variables:',
+    configServer.error.flatten().fieldErrors,
+  );
+  process.exit(1);
+}
+
+// 5. Export data đã được validate và có kiểu dữ liệu (Type-safe)
+const envConfig = configServer.data;
+
+console.log('✅ Environment variables loaded successfully.');
+
+export default envConfig;
+</file>
+
+<file path="src/shared/services/prisma.service.ts">
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { Injectable } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from 'src/generated/prisma/client';
+import envConfig from '../config';
+
+@Injectable()
+export class PrismaService extends PrismaClient {
+  constructor() {
+    const connectionString = envConfig.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable must be set');
+    }
+
+    // use postgresql adapter
+    const adapter = new PrismaPg({
+      connectionString,
+    });
+    super({ adapter, log: ['info', 'warn', 'error', 'query'] });
+  }
+
+  async onModuleInit() {
+    await this.$connect();
+  }
+}
+</file>
+
+<file path="src/shared/shared.module.ts">
+import { Module } from '@nestjs/common';
+import { PrismaService } from './services/prisma.service';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthService } from './services/jwt.service';
+import { AuthenticationGuard } from './guards/authentication.guard';
+import { RolesGuard } from './guards/role.guard';
+import { AccessTokenGuard } from './guards/jwt.guard';
+
+@Module({
+  imports: [JwtModule.register({})],
+  providers: [
+    PrismaService,
+    JwtAuthService,
+    AuthenticationGuard,
+    RolesGuard,
+    AccessTokenGuard,
+  ],
+  exports: [
+    PrismaService,
+    JwtAuthService,
+    AuthenticationGuard,
+    RolesGuard,
+    AccessTokenGuard,
+  ],
+})
+export class SharedModule {}
+</file>
+
+</files>

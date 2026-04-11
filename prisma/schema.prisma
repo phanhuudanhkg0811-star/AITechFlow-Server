@@ -9,22 +9,25 @@ datasource db {
   provider   = "postgresql"
   extensions = [vector] // Kích hoạt pgvector cho PostgreSQL
 }
+
 // ---------------------------------------------------------
 // 1. AUTH & USERS (Quản lý Xác thực & Người dùng)
 // ---------------------------------------------------------
 model User {
-  id             String        @id @default(uuid())
-  email          String        @unique
-  githubId       String?       @unique 
+  id             String  @id @default(uuid())
+  email          String  @unique
+  githubId       String? @unique
   githubUsername String?
   name           String?
   avatarUrl      String?
-  role           Role          @default(CANDIDATE)
-  
-  sessions       Session[]     // Quan hệ 1-N: 1 User có nhiều phiên đăng nhập
-  applications   Application[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  role           Role    @default(CANDIDATE)
+
+  sessions     Session[] // Quan hệ 1-N: 1 User có nhiều phiên đăng nhập
+  applications Application[]
+  createdJobs  JobDescription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Thêm bảng Session mới
@@ -32,13 +35,13 @@ model Session {
   id           String   @id @default(uuid())
   userId       String
   refreshToken String   @unique // Lưu refresh token đã được hash
-  userAgent    String?  // Lưu thông tin trình duyệt (VD: Chrome on Windows)
-  ipAddress    String?  // Lưu địa chỉ IP đăng nhập
+  userAgent    String? // Lưu thông tin trình duyệt (VD: Chrome on Windows)
+  ipAddress    String? // Lưu địa chỉ IP đăng nhập
   expiresAt    DateTime // Thời gian token này hết hạn
   createdAt    DateTime @default(now())
 
   // Relation với bảng User, dùng Cascade để khi xóa User thì xóa luôn các session
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -51,30 +54,34 @@ enum Role {
 // 2. CORE RECRUITMENT (JD, CV & Đơn ứng tuyển)
 // ---------------------------------------------------------
 model JobDescription {
-  id           String        @id @default(uuid())
-  title        String
-  content      String  //Nội dung của Job
-  embedding    Unsupported("vector(768)")?
-  
+  id        String                      @id @default(uuid())
+  title     String
+  content   String //Nội dung của Job
+  embedding Unsupported("vector(3072)")?
+  hrEmail   String?                     @unique //Dùng để kiểm tra xem dùng email nào để nhận cv cho job này
+
+  creatorId String?
+  creator   User?   @relation(fields: [creatorId], references: [id])
+
   applications Application[]
-  scenarios    TestScenario[] 
-  createdAt    DateTime      @default(now())
+  scenarios    TestScenario[]
+  createdAt    DateTime       @default(now())
 }
 
 model Application {
-  id           String    @id @default(uuid())
-  userId       String
-  jobId        String
-  cvText       String    // Nội dung bóc tách từ file PDF CV
-  cvEmbedding  Unsupported("vector(768)")? 
-  matchScore   Float?    // Điểm
-  status       AppStatus @default(SCREENING)
+  id          String                      @id @default(uuid())
+  userId      String
+  jobId       String
+  cvText      String // Nội dung bóc tách từ file PDF CV
+  cvEmbedding Unsupported("vector(3072)")?
+  matchScore  Float? // Điểm
+  status      AppStatus                   @default(SCREENING)
 
-  user         User      @relation(fields: [userId], references: [id])
-  job          JobDescription @relation(fields: [jobId], references: [id])
-  
-  testSession  TestSession?
-  report       AssessmentReport?
+  user User           @relation(fields: [userId], references: [id])
+  job  JobDescription @relation(fields: [jobId], references: [id])
+
+  testSession TestSession?
+  report      AssessmentReport?
 }
 
 enum AppStatus {
@@ -89,29 +96,29 @@ enum AppStatus {
 // 3. TELEMETRY & IDE MONITORING (Giám sát chống gian lận)
 // ---------------------------------------------------------
 model TestSession {
-  id             String       @id @default(uuid())
-  applicationId  String       @unique
-  scenarioId     String
-  startTime      DateTime?
-  endTime        DateTime?
-  
-  // Cục JSON chứa toàn bộ mã nguồn ứng viên nộp để AI chấm
-  finalCode      Json?        
+  id            String    @id @default(uuid())
+  applicationId String    @unique
+  scenarioId    String
+  startTime     DateTime?
+  endTime       DateTime?
 
-  application    Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  scenario       TestScenario @relation(fields: [scenarioId], references: [id])
-  ideEvents      IdeEvent[]
-  promptLogs     PromptLog[]
+  // Cục JSON chứa toàn bộ mã nguồn ứng viên nộp để AI chấm
+  finalCode Json?
+
+  application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scenario    TestScenario @relation(fields: [scenarioId], references: [id])
+  ideEvents   IdeEvent[]
+  promptLogs  PromptLog[]
 }
 
 model IdeEvent {
-  id            String      @id @default(uuid())
-  sessionId     String
-  eventType     EventType   // PASTE, KEYSTROKE_ANOMALY
-  payload       Json        // Chứa dữ liệu chi tiết, ví dụ: { pastedLines: 500 } 
-  createdAt     DateTime    @default(now())
+  id        String    @id @default(uuid())
+  sessionId String
+  eventType EventType // PASTE, KEYSTROKE_ANOMALY
+  payload   Json // Chứa dữ liệu chi tiết, ví dụ: { pastedLines: 500 } 
+  createdAt DateTime  @default(now())
 
-  session       TestSession @relation(fields: [sessionId], references: [id])
+  session TestSession @relation(fields: [sessionId], references: [id])
 }
 
 enum EventType {
@@ -121,44 +128,44 @@ enum EventType {
 }
 
 model PromptLog {
-  id            String      @id @default(uuid())
-  sessionId     String
-  prompt        String      // Lịch sử câu lệnh gửi cho Ollama Local Assistant [cite: 300]
-  aiResponse    String?
-  createdAt     DateTime    @default(now())
+  id         String   @id @default(uuid())
+  sessionId  String
+  prompt     String // Lịch sử câu lệnh gửi cho Ollama Local Assistant [cite: 300]
+  aiResponse String?
+  createdAt  DateTime @default(now())
 
-  session       TestSession @relation(fields: [sessionId], references: [id])
+  session TestSession @relation(fields: [sessionId], references: [id])
 }
 
 // ---------------------------------------------------------
 // 4. AI ASSESSMENT (Kết quả từ Virtual Tech Lead)
 // ---------------------------------------------------------
 model AssessmentReport {
-  id                String      @id @default(uuid())
-  applicationId     String      @unique
-  architectureScore Float?
-  cleanCodeScore    Float?
-  riskFlags         Json?       // Lưu mảng các cảnh báo gian lận
-  interviewQuestions Json?      // Các câu hỏi phỏng vấn tự sinh
-  summary           String?     // Tóm tắt cho HR Portal
+  id                 String  @id @default(uuid())
+  applicationId      String  @unique
+  architectureScore  Float?
+  cleanCodeScore     Float?
+  riskFlags          Json? // Lưu mảng các cảnh báo gian lận
+  interviewQuestions Json? // Các câu hỏi phỏng vấn tự sinh
+  summary            String? // Tóm tắt cho HR Portal
 
-  application       Application @relation(fields: [applicationId], references: [id])
+  application Application @relation(fields: [applicationId], references: [id])
 }
 
 //Bối cảnh cho bài test
 model TestScenario {
-  id             String   @id @default(uuid())
-  jobId          String
-  title          String
-  difficulty     String 
-  timeLimit      Int      @default(90)
-  
-  context        String   @db.Text 
-  
+  id         String @id @default(uuid())
+  jobId      String
+  title      String
+  difficulty String
+  timeLimit  Int    @default(90)
+
+  context String @db.Text
+
   // Cấu trúc file mẫu để WebContainers tải lên
-  initialCode    Json     
-  
-  job            JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  testSessions   TestSession[]
-  createdAt      DateTime @default(now())
+  initialCode Json
+
+  job          JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  testSessions TestSession[]
+  createdAt    DateTime       @default(now())
 }

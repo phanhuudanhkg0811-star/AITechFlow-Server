@@ -24,7 +24,11 @@ const configSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   GITHUB_CLIENT_URL: z.string().min(1),
   GITHUB_CLIENT_CALLBACK_URL: z.string().min(1),
-  JWT_SECRET: z.string().min(1),
+  ACCESS_TOKEN_SECRET: z.string().min(1),
+  ACCESS_TOKEN_EXPIRES_IN: z.string().min(1),
+  REFRESH_TOKEN_SECRET: z.string().min(1),
+  REFRESH_TOKEN_EXPIRES_IN: z.string().min(1),
+  SECRET_API_KEY: z.string().min(1),
 });
 
 // 4. Parse và Validate
