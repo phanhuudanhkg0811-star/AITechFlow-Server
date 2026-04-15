@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Controller, Get, Request } from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
 // Lưu ý: Không cần khai báo @UseGuards vì AuthenticationGuard của ông

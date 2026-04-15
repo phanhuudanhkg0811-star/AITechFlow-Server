@@ -29,6 +29,16 @@ const configSchema = z.object({
   REFRESH_TOKEN_SECRET: z.string().min(1),
   REFRESH_TOKEN_EXPIRES_IN: z.string().min(1),
   SECRET_API_KEY: z.string().min(1),
+  IMAP_HOST: z.string().default('imap.gmail.com'),
+  IMAP_PORT: z.coerce.number().default(993),
+  HR_ACCOUNTS: z.string().default('[]'),
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string(),
+  SMTP_PASS: z.string(),
+  EMAIL_FROM: z.string(),
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
 });
 
 // 4. Parse và Validate

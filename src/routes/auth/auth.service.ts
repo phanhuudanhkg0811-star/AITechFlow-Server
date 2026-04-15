@@ -17,24 +17,45 @@ export class AuthService {
     ipAddress: string,
     userAgent: string,
   ) {
-    // 1. Tìm hoặc tạo mới User dựa trên githubId (Upsert)
-    const user = await this.prisma.user.upsert({
-      where: { githubId: profile.githubId },
-      update: {
-        name: profile.name,
-        avatarUrl: profile.avatarUrl,
-        githubUsername: profile.githubUsername,
-      },
-      create: {
-        email: profile.email,
-        githubId: profile.githubId,
-        githubUsername: profile.githubUsername,
-        name: profile.name,
-        avatarUrl: profile.avatarUrl,
-        role: 'CANDIDATE',
+    // 1. TÌM VÀ HỢP NHẤT (RECONCILIATION)
+    // Ưu tiên tìm user theo Email (do AI Pipeline tạo ra) hoặc GithubId (nếu đã từng đăng nhập)
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: profile.email }, // Khớp qua email CV
+          { githubId: profile.githubId }, // Khớp qua lần đăng nhập trước
+        ],
       },
     });
 
+    if (user) {
+      // NẾU ĐÃ TỒN TẠI (Được AI quét CV tạo sẵn, hoặc user cũ)
+      // -> Cập nhật thêm githubId và avatar để hoàn thiện hồ sơ
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          githubId: profile.githubId,
+          name: profile.name,
+          avatarUrl: profile.avatarUrl,
+          githubUsername: profile.githubUsername,
+        },
+      });
+    } else {
+      // NẾU CHƯA TỒN TẠI (Ứng viên tự vãng lai đi lạc vào web, không qua gửi CV)
+      // -> Bắt buộc tạo mới
+      user = await this.prisma.user.create({
+        data: {
+          email: profile.email,
+          githubId: profile.githubId,
+          githubUsername: profile.githubUsername,
+          name: profile.name,
+          avatarUrl: profile.avatarUrl,
+          role: 'CANDIDATE',
+        },
+      });
+    }
+
+    // --- (Phần code sinh Token và tạo Session giữ nguyên như cũ của bạn) ---
     const payload = { sub: user.id, email: user.email, role: user.role };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtAuthService.signAccessToken(payload),
@@ -46,7 +67,7 @@ export class AuthService {
 
     await this.prisma.session.create({
       data: {
-        userId: user.id,
+        userId: user.id, // Vẫn là user.id đó, nên TestSession sẽ được giữ nguyên!
         refreshToken: refreshToken,
         ipAddress: ipAddress,
         userAgent: userAgent,

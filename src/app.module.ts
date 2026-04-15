@@ -10,6 +10,7 @@ import CustomZodValidationPipe from './shared/pipes/zod-validator.pipe';
 import { JobModule } from './routes/job/job.module';
 import { DashboardModule } from './routes/dashboard/dashboard.module';
 import { ApplicationModule } from './routes/application/application.module';
+import { AiModule } from './routes/ai/ai.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ApplicationModule } from './routes/application/application.module';
     JobModule,
     DashboardModule,
     ApplicationModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
