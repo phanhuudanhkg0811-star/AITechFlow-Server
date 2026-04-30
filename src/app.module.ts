@@ -11,6 +11,7 @@ import { JobModule } from './routes/job/job.module';
 import { DashboardModule } from './routes/dashboard/dashboard.module';
 import { ApplicationModule } from './routes/application/application.module';
 import { AiModule } from './routes/ai/ai.module';
+import { ConversationModule } from './routes/conversation/conversation.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AiModule } from './routes/ai/ai.module';
     DashboardModule,
     ApplicationModule,
     AiModule,
+    ConversationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { UnprocessableEntityException } from '@nestjs/common';
 import { createZodValidationPipe } from 'nestjs-zod';
-import { ZodError } from 'zod'; // Bắt buộc phải import lại ZodError
+import { ZodError } from 'zod';
 
 const CustomZodValidationPipe = createZodValidationPipe({
   createValidationException: (error) => {
-    // Ép kiểu (Type Assertion) error thành ZodError ở ngay đây
     const zodError = error as ZodError;
     const issues = zodError?.issues || [];
 

@@ -32,11 +32,6 @@ export class TestsController {
     return this.testsService.renameTestScenario(sessionId, newTitle);
   }
 
-  @Post(':id/submit')
-  async submitTest(@Param('id') sessionId: string) {
-    return this.testsService.submitAndTriggerGrading(sessionId);
-  }
-
   @Get('my-tests')
   // @UseGuards(JwtAuthGuard)
   async getMyApplications(@Request() req) {
@@ -67,5 +62,18 @@ export class TestsController {
     });
 
     return apps;
+  }
+
+  @Get(':id')
+  async getTestSession(@Param('id') sessionId: string) {
+    return this.testsService.getTestSession(sessionId);
+  }
+
+  @Post(':id/submit')
+  async submitTest(
+    @Param('id') sessionId: string,
+    @Body('finalCode') finalCode: any, // Hứng cục JSON mã nguồn từ Frontend gửi lên
+  ) {
+    return this.testsService.submitAndTriggerGrading(sessionId, finalCode);
   }
 }

@@ -67,28 +67,70 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    // Gọi hàm kết nối cho từng tài khoản
     for (const account of hrAccounts) {
-      const client = new ImapFlow({
-        host: envConfig.IMAP_HOST,
-        port: envConfig.IMAP_PORT || 993,
-        secure: true,
-        auth: {
-          user: account.email,
-          pass: account.appPassword,
-        },
-        logger: false,
-      });
+      await this.connectImap(account);
+    }
+  }
 
-      try {
-        await client.connect();
-        this.imapClients.set(account.email, client);
-        this.logger.log(`✅ IMAP connected: ${account.email}`);
-      } catch (error) {
-        this.logger.error(
-          `❌ IMAP connection failed for ${account.email}:`,
-          error,
-        );
-      }
+  // 👉 Tách riêng logic kết nối thành một hàm độc lập
+  private async connectImap(account: HrEmailConfig) {
+    const client = new ImapFlow({
+      host: envConfig.IMAP_HOST || 'imap.gmail.com',
+      port: envConfig.IMAP_PORT || 993,
+      secure: true,
+      auth: {
+        user: account.email,
+        pass: account.appPassword,
+      },
+      logger: false,
+      socketTimeout: 60000,
+      connectionTimeout: 30000,
+    });
+
+    // 1. Hứng lỗi ngầm để chống sập server
+    client.on('error', (error) => {
+      this.logger.error(
+        `❌ IMAP Background Error [${account.email}]: ${error.message}`,
+      );
+    });
+
+    // 2. Lắng nghe sự kiện mất kết nối để TỰ ĐỘNG RECONNECT
+    client.on('close', () => {
+      this.logger.warn(
+        `⚠️ Mất kết nối IMAP [${account.email}]. Đang thử kết nối lại sau 10 giây...`,
+      );
+
+      // Xóa client cũ đã chết khỏi Map
+      this.imapClients.delete(account.email);
+
+      // Đợi 10 giây rồi gọi lại chính hàm này để tạo kết nối mới
+      setTimeout(() => {
+        this.connectImap(account).catch((err) => {
+          this.logger.error(
+            `❌ Lỗi khi thử kết nối lại [${account.email}]:`,
+            err,
+          );
+        });
+      }, 10000);
+    });
+
+    // 3. Thực hiện kết nối
+    try {
+      await client.connect();
+      this.imapClients.set(account.email, client);
+      this.logger.log(`✅ IMAP connected: ${account.email}`);
+    } catch (error) {
+      this.logger.error(
+        `❌ IMAP connection failed for ${account.email}:`,
+        error,
+      );
+
+      // Nếu ngay lần đầu kết nối đã thất bại (ví dụ sai pass, đứt mạng),
+      // cũng kích hoạt thử lại sau 10 giây
+      setTimeout(() => {
+        this.connectImap(account).catch((e) => console.error(e));
+      }, 10000);
     }
   }
 
@@ -248,15 +290,12 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
       }
       this.logger.log(`📋 [${candidateEmail}] Job: ${job.title}`);
 
-      // ✅ 2. Parse PDF với API mới (PDFParse)
+      // 1. Parse PDF
       const parser = new PDFParse({ data: pdfBuffer });
       let cvText = '';
       try {
         const result = await parser.getText();
         cvText = result.text;
-        this.logger.log(
-          `📄 [${candidateEmail}] PDF parsed (${cvText.length} chars)`,
-        );
       } catch (parseError) {
         this.logger.error(
           `❌ [${candidateEmail}] PDF parse error:`,
@@ -267,124 +306,95 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
       }
       await parser.destroy();
 
-      const user = await this.prisma.user.upsert({
-        where: { email: candidateEmail },
-        update: {},
-        create: { email: candidateEmail, role: 'CANDIDATE' },
-      });
-      const application = await this.prisma.application.create({
-        data: {
-          userId: user.id,
-          jobId: job.id,
-          cvText: cvText,
-          status: 'SCREENING',
-        },
-      });
-      this.logger.log(
-        `👤 [${candidateEmail}] Application created: ${application.id}`,
-      );
-
+      // 2. Chấm điểm Github Integrity (Giữ nguyên logic cũ của bạn)
       const githubUsername = this.extractGithubUsername(cvText);
       let githubAnalysisResult: IntegrityReport | null = null;
 
       if (githubUsername) {
-        this.logger.log(
-          `🐙 [${candidateEmail}] GitHub username found: ${githubUsername}`,
-        );
         const githubStats = await this.fetchGitHubStats(githubUsername);
         const sourceCodeInfo = await this.fetchGitHubSourceCode(githubUsername);
-
         if (githubStats.length > 0) {
-          this.logger.log(
-            `🤖 [${candidateEmail}] Calling AI for integrity analysis...`,
-          );
           githubAnalysisResult = await this.evaluateProfileIntegrity(
             cvText,
             githubStats,
             sourceCodeInfo,
           );
-
-          if (githubAnalysisResult) {
-            await this.prisma.assessmentReport.create({
-              data: {
-                applicationId: application.id,
-                summary: githubAnalysisResult.analysis,
-                riskFlags: githubAnalysisResult.redFlags as any,
-              },
-            });
-            this.logger.log(
-              `📊 [${candidateEmail}] Integrity score: ${githubAnalysisResult.integrityScore}`,
-            );
-          }
-        } else {
-          this.logger.warn(
-            `⚠️ [${candidateEmail}] No public GitHub repos found`,
-          );
         }
-      } else {
-        this.logger.log(`ℹ️ [${candidateEmail}] No GitHub link in CV`);
       }
 
+      // 3. Tính điểm CV Match TRỰC TIẾP (Chưa tạo User)
       this.logger.log(`🎯 [${candidateEmail}] Calculating CV match score...`);
-      const matchScore = await this.cvScreeningService.evaluateCvMatching(
-        application.id,
-      );
+      const { score: matchScore, vectorString } =
+        await this.cvScreeningService.evaluateTextMatching(cvText, job.id);
       this.logger.log(`📈 [${candidateEmail}] Match score: ${matchScore}%`);
 
-      const updatedApp = await this.prisma.application.findUnique({
-        where: { id: application.id },
-        include: { job: true, testSession: true },
-      });
-      if (!updatedApp) {
-        this.logger.error(
-          `❌ [${candidateEmail}] Application disappeared after update`,
-        );
-        return;
-      }
-
+      // 4. Quyết định Đậu / Rớt
       const MATCH_THRESHOLD = 70;
       const INTEGRITY_THRESHOLD = 60;
       const integrityScore = githubAnalysisResult?.integrityScore ?? 100;
       const isQualified =
-        (updatedApp.matchScore ?? 0) >= MATCH_THRESHOLD &&
-        integrityScore >= INTEGRITY_THRESHOLD;
+        matchScore >= MATCH_THRESHOLD && integrityScore >= INTEGRITY_THRESHOLD;
 
-      this.logger.log(
-        `⚖️ [${candidateEmail}] Qualified: ${isQualified} (match: ${updatedApp.matchScore}, integrity: ${integrityScore})`,
-      );
+      this.logger.log(`⚖️ [${candidateEmail}] Qualified: ${isQualified}`);
 
-      if (isQualified && job.scenarios.length > 0) {
-        if (!updatedApp.testSession) {
+      if (isQualified) {
+        // NẾU ĐẬU: Mới bắt đầu tạo User, Application, Report, TestSession vào DB
+        const user = await this.prisma.user.upsert({
+          where: { email: candidateEmail },
+          update: {},
+          create: { email: candidateEmail, role: 'CANDIDATE' },
+        });
+
+        const application = await this.prisma.application.create({
+          data: {
+            userId: user.id,
+            jobId: job.id,
+            cvText: cvText,
+            matchScore: matchScore,
+            status: 'TESTING', // Pass thẳng vòng gửi xe, vô luôn TESTING
+          },
+        });
+
+        // Cập nhật Vector 3072 vào Application
+        await this.prisma.$executeRawUnsafe(`
+          UPDATE "Application" SET "cvEmbedding" = '${vectorString}'::vector WHERE id = '${application.id}'
+        `);
+
+        // Lưu Report đánh giá Github
+        if (githubAnalysisResult) {
+          await this.prisma.assessmentReport.create({
+            data: {
+              applicationId: application.id,
+              summary: githubAnalysisResult.analysis,
+              riskFlags: githubAnalysisResult.redFlags as any,
+            },
+          });
+        }
+
+        // Tạo Session & Gửi mail mời thi
+        if (job.scenarios.length > 0) {
           const testSession = await this.prisma.testSession.create({
             data: {
               applicationId: application.id,
               scenarioId: job.scenarios[0].id,
             },
           });
-          updatedApp.testSession = testSession;
+          const testLink = `${envConfig.FRONTEND_URL}/tests/${testSession.id}`;
+          await this.emailService.sendTestInvitation(
+            candidateEmail,
+            testLink,
+            job.title,
+          );
+          this.logger.log(
+            `✅ [${candidateEmail}] Tạo Account thành công. Đã gửi Invitation email.`,
+          );
         }
-
-        if (updatedApp.status !== 'TESTING') {
-          await this.prisma.application.update({
-            where: { id: application.id },
-            data: { status: 'TESTING' },
-          });
-        }
-
-        const testLink = `${envConfig.FRONTEND_URL}/tests/${updatedApp.testSession.id}`;
-        await this.emailService.sendTestInvitation(
-          candidateEmail,
-          testLink,
-          job.title,
-        );
-        this.logger.log(`✅ [${candidateEmail}] Invitation email sent`);
       } else {
-        await this.prisma.application.update({
-          where: { id: application.id },
-          data: { status: 'REJECTED' },
-        });
+        // NẾU RỚT: Bỏ qua bước tạo User & Application, từ chối thẳng
         await this.emailService.sendRejection(candidateEmail, job.title);
-        this.logger.log(`❌ [${candidateEmail}] Rejection email sent`);
+        this.logger.log(
+          `❌ [${candidateEmail}] Ứng viên không đạt chuẩn. Đã gửi Rejection email và KHÔNG tạo Account.`,
+        );
       }
 
       const duration = Date.now() - start;
@@ -392,11 +402,7 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
         `🎉 [${candidateEmail}] Pipeline completed in ${duration}ms`,
       );
     } catch (error) {
-      const duration = Date.now() - start;
-      this.logger.error(
-        `💥 [${candidateEmail}] Pipeline failed after ${duration}ms:`,
-        error,
-      );
+      this.logger.error(`💥 [${candidateEmail}] Pipeline failed:`, error);
     }
   }
 

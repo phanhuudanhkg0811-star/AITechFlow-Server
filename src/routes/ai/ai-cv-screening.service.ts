@@ -29,51 +29,28 @@ export class CvScreeningService {
     }
   }
 
-  async evaluateCvMatching(applicationId: string): Promise<number> {
+  async evaluateTextMatching(
+    cvText: string,
+    jobId: string,
+  ): Promise<{ score: number; vectorString: string }> {
     try {
-      // 1. Lấy application và job
-      const application = await this.prisma.application.findUnique({
-        where: { id: applicationId },
-        include: { job: true },
-      });
-      if (!application) throw new Error('Application not found');
-
-      // 2. Tạo vector cho CV
-      this.logger.log(`Đang tạo embedding 3072 cho CV ID: ${applicationId}`);
-      const cvVector = await this.generateEmbedding(application.cvText);
+      this.logger.log(`Đang tạo embedding 3072 cho CV Text...`);
+      const cvVector = await this.generateEmbedding(cvText);
       const vectorString = `[${cvVector.join(',')}]`;
 
-      // 3. Lưu vector CV vào DB
-      await this.prisma.$executeRawUnsafe(`
-        UPDATE "Application" 
-        SET "cvEmbedding" = '${vectorString}'::vector 
-        WHERE id = '${applicationId}'
-      `);
-
-      // 4. Tính similarity giữa CV và JD (cùng 3072 chiều)
+      // Thực thi phép tính Cosine Similarity (<=>) trực tiếp giữa chuỗi Vector và Job
       const matchResult: any = await this.prisma.$queryRawUnsafe(`
-        SELECT 1 - ("cvEmbedding" <=> (SELECT "embedding" FROM "JobDescription" WHERE id = '${application.jobId}')) AS similarity
-        FROM "Application"
-        WHERE id = '${applicationId}'
+        SELECT 1 - ('${vectorString}'::vector <=> (SELECT "embedding" FROM "JobDescription" WHERE id = '${jobId}')) AS similarity
       `);
 
       const similarityScore = matchResult[0]?.similarity;
-      let finalScore = 0;
+      const finalScore = similarityScore
+        ? Math.round(similarityScore * 100 * 100) / 100
+        : 0;
 
-      if (similarityScore) {
-        finalScore = Math.round(similarityScore * 100 * 100) / 100;
-        await this.prisma.application.update({
-          where: { id: applicationId },
-          data: {
-            matchScore: finalScore,
-          },
-        });
-      }
-
-      this.logger.log(`Điểm phù hợp CV: ${finalScore}%`);
-      return finalScore;
+      return { score: finalScore, vectorString };
     } catch (error) {
-      this.logger.error('Lỗi khi chấm điểm CV:', error);
+      this.logger.error('Lỗi khi chấm điểm CV trực tiếp:', error);
       throw error;
     }
   }

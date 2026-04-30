@@ -51,7 +51,8 @@ export class AuthenticationGuard implements CanActivate {
           return true;
         }
       }
-      throw error;
+      console.log(error);
+      return false;
     } else {
       for (const instance of guards) {
         const canActivate = await instance.canActivate(context);

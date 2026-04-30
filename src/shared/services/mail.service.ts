@@ -11,7 +11,7 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       host: envConfig.SMTP_HOST,
       port: envConfig.SMTP_PORT,
-      secure: envConfig.SMTP_SECURE,
+      secure: envConfig.SMTP_PORT === 465,
       auth: {
         user: envConfig.SMTP_USER,
         pass: envConfig.SMTP_PASS,
@@ -30,7 +30,6 @@ export class EmailService {
       this.logger.log(`Email sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send email to ${to}`, error);
-      throw error;
     }
   }
 

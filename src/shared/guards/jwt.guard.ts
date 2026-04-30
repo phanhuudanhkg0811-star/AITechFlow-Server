@@ -7,9 +7,15 @@ export class AccessTokenGuard implements CanActivate {
   constructor(private readonly JwtAuthService: JwtAuthService) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers.authorization;
-    const accessToken =
-      typeof authHeader === 'string' ? authHeader.split(' ')[1] : undefined;
+    // Ưu tiên đọc từ Cookie trước
+    let accessToken = request.cookies?.['accessToken'];
+
+    // Fallback: Lỡ như lúc test API trên Postman muốn truyền Header thì vẫn chạy được
+    if (!accessToken) {
+      const authHeader = request.headers.authorization;
+      accessToken =
+        typeof authHeader === 'string' ? authHeader.split(' ')[1] : undefined;
+    }
     if (!accessToken) {
       return false;
     }
@@ -23,4 +29,3 @@ export class AccessTokenGuard implements CanActivate {
     }
   }
 }
-// Dùng cho kiểm tra access token trong request, sử dụng bằng cách thêm decorator @UseGuard(AuthGuard)

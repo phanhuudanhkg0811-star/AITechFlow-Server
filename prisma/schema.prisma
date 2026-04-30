@@ -108,14 +108,16 @@ model TestSession {
   application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   scenario    TestScenario @relation(fields: [scenarioId], references: [id])
   ideEvents   IdeEvent[]
-  promptLogs  PromptLog[]
+  
+  // Đã thay thế promptLogs bằng conversations
+  conversations Conversation[] 
 }
 
 model IdeEvent {
   id        String    @id @default(uuid())
   sessionId String
   eventType EventType // PASTE, KEYSTROKE_ANOMALY
-  payload   Json // Chứa dữ liệu chi tiết, ví dụ: { pastedLines: 500 } 
+  payload   Json      // Chứa dữ liệu chi tiết, ví dụ: { pastedLines: 500 } 
   createdAt DateTime  @default(now())
 
   session TestSession @relation(fields: [sessionId], references: [id])
@@ -125,16 +127,6 @@ enum EventType {
   PASTE_EVENT
   TAB_SWITCH
   RAPID_TYPING
-}
-
-model PromptLog {
-  id         String   @id @default(uuid())
-  sessionId  String
-  prompt     String // Lịch sử câu lệnh gửi cho Ollama Local Assistant [cite: 300]
-  aiResponse String?
-  createdAt  DateTime @default(now())
-
-  session TestSession @relation(fields: [sessionId], references: [id])
 }
 
 // ---------------------------------------------------------
@@ -168,4 +160,31 @@ model TestScenario {
   job          JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
   testSessions TestSession[]
   createdAt    DateTime       @default(now())
+}
+
+// ---------------------------------------------------------
+// 5. CHAT ASSISTANT LOGS (Thay thế cho PromptLog)
+// ---------------------------------------------------------
+model Conversation {
+  id        String   @id @default(uuid())
+  testId    String   
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // LIÊN KẾT TRỰC TIẾP với TestSession. Khi xóa TestSession, các đoạn chat cũng bị xóa theo (Cascade)
+  session   TestSession @relation(fields: [testId], references: [id], onDelete: Cascade)
+  
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role           String       // "user" hoặc "assistant"
+  content        String       @db.Text
+  status         String       @default("completed") // "processing", "completed", "failed"
+  createdAt      DateTime     @default(now())
 }

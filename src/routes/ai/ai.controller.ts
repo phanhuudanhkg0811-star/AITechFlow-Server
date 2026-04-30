@@ -1,18 +1,43 @@
-import { Controller, Post } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { AiService } from './ai.service';
+import { Roles } from 'src/shared/decorators/role.decorator';
+import { RolesGuard } from 'src/shared/guards/role.guard';
 import { AiPipelineService } from './ai-pineline.service';
-import { IsPublic } from 'src/shared/decorators/auth.decorator';
 
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiPipelineService: AiPipelineService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly aiPipelineService: AiPipelineService,
+  ) {}
 
-  // API này dùng để test thủ công
+  @Post('suggestion')
+  async getSuggestion(@Body() body: any) {
+    const suggestion = await this.aiService.generateCodeSuggestion(body);
+    return { suggestion };
+  }
+
+  @Post('quick-edit')
+  async quickEdit(@Body() body: any) {
+    const editedCode = await this.aiService.generateQuickEdit(body);
+    return { editedCode };
+  }
+
   @Post('trigger-pipeline')
-  @IsPublic()
-  async triggerPipeline() {
-    await this.aiPipelineService.handleIncomingApplications();
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  triggerPipelineManually() {
+    // Bỏ async/await ở hàm này để request trả về luôn lập tức (non-blocking)
+    // Gọi đúng tên hàm handleIncomingApplications() của bạn
+    this.aiPipelineService.handleIncomingApplications().catch((err) => {
+      console.error('Lỗi khi chạy thủ công AI Pipeline:', err);
+    });
+
     return {
-      message: 'Đã kích hoạt luồng quét CV thành công! Hãy xem log ở Terminal.',
+      success: true,
+      message:
+        'AI Pipeline đã được kích hoạt chạy ngầm. Hệ thống đang quét hòm thư...',
     };
   }
 }

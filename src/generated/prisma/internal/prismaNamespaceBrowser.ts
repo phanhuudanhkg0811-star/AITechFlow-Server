@@ -57,9 +57,10 @@ export const ModelName = {
   Application: 'Application',
   TestSession: 'TestSession',
   IdeEvent: 'IdeEvent',
-  PromptLog: 'PromptLog',
   AssessmentReport: 'AssessmentReport',
-  TestScenario: 'TestScenario'
+  TestScenario: 'TestScenario',
+  Conversation: 'Conversation',
+  Message: 'Message'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -153,17 +154,6 @@ export const IdeEventScalarFieldEnum = {
 export type IdeEventScalarFieldEnum = (typeof IdeEventScalarFieldEnum)[keyof typeof IdeEventScalarFieldEnum]
 
 
-export const PromptLogScalarFieldEnum = {
-  id: 'id',
-  sessionId: 'sessionId',
-  prompt: 'prompt',
-  aiResponse: 'aiResponse',
-  createdAt: 'createdAt'
-} as const
-
-export type PromptLogScalarFieldEnum = (typeof PromptLogScalarFieldEnum)[keyof typeof PromptLogScalarFieldEnum]
-
-
 export const AssessmentReportScalarFieldEnum = {
   id: 'id',
   applicationId: 'applicationId',
@@ -189,6 +179,29 @@ export const TestScenarioScalarFieldEnum = {
 } as const
 
 export type TestScenarioScalarFieldEnum = (typeof TestScenarioScalarFieldEnum)[keyof typeof TestScenarioScalarFieldEnum]
+
+
+export const ConversationScalarFieldEnum = {
+  id: 'id',
+  testId: 'testId',
+  title: 'title',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[keyof typeof ConversationScalarFieldEnum]
+
+
+export const MessageScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  role: 'role',
+  content: 'content',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
 
 
 export const SortOrder = {

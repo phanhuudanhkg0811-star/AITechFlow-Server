@@ -48,11 +48,6 @@ export type TestSession = Prisma.TestSessionModel
  */
 export type IdeEvent = Prisma.IdeEventModel
 /**
- * Model PromptLog
- * 
- */
-export type PromptLog = Prisma.PromptLogModel
-/**
  * Model AssessmentReport
  * 
  */
@@ -62,3 +57,13 @@ export type AssessmentReport = Prisma.AssessmentReportModel
  * 
  */
 export type TestScenario = Prisma.TestScenarioModel
+/**
+ * Model Conversation
+ * 
+ */
+export type Conversation = Prisma.ConversationModel
+/**
+ * Model Message
+ * 
+ */
+export type Message = Prisma.MessageModel

@@ -36,35 +36,62 @@ export class TestService {
     };
   }
 
-  async submitAndTriggerGrading(sessionId: string) {
-    // 1. Lấy thông tin session và đóng băng phiên làm bài
-    const session = await this.prisma.testSession.update({
+  async getTestSession(sessionId: string) {
+    let session = await this.prisma.testSession.findUnique({
       where: { id: sessionId },
-      data: {
-        endTime: new Date(), // Chốt thời gian nộp bài
-      },
       include: {
-        application: true, // Join bảng Application để đổi trạng thái
+        scenario: {
+          select: {
+            title: true,
+            difficulty: true,
+            timeLimit: true,
+            context: true,
+            initialCode: true,
+          },
+        },
+        application: {
+          select: {
+            status: true,
+            job: { select: { title: true } },
+            user: { select: { name: true, email: true, githubUsername: true } },
+          },
+        },
       },
     });
 
-    // 2. Cập nhật trạng thái của Application sang AI Đang Chấm (REVIEWING)
-    await this.prisma.application.update({
-      where: { id: session.applicationId },
-      data: {
-        status: 'REVIEWING', // Dùng đúng enum AppStatus bạn đã định nghĩa
-      },
-    });
+    if (!session) {
+      throw new NotFoundException('Không tìm thấy phiên làm bài này');
+    }
 
-    // 3. Kích hoạt Agentic AI chạy ngầm (Chỗ này bạn sẽ gọi logic LangChain/Gemini)
-    // Lưu ý: Dùng async/await mà không cần return cái này ra Frontend để ứng viên không phải đợi AI chạy xong.
-    // this.triggerAgenticAIGrading(sessionId).catch((err) => {
-    //   console.error('Lỗi khi AI chấm bài tự động:', err);
-    // });
+    // NẾU CHƯA CÓ THỜI GIAN BẮT ĐẦU -> CHỐT GIỜ NGAY LÚC NÀY (BẮT ĐẦU TÍNH GIỜ)
+    if (!session.startTime) {
+      session = await this.prisma.testSession.update({
+        where: { id: sessionId },
+        data: { startTime: new Date() },
+        include: {
+          scenario: {
+            select: {
+              title: true,
+              difficulty: true,
+              timeLimit: true,
+              context: true,
+              initialCode: true,
+            },
+          },
+          application: {
+            select: {
+              status: true,
+              job: { select: { title: true } },
+              user: {
+                select: { name: true, email: true, githubUsername: true },
+              },
+            },
+          },
+        },
+      });
+    }
 
-    return {
-      message: 'Nộp bài thành công. Luồng chấm điểm AI đã được kích hoạt.',
-    };
+    return session;
   }
 
   //   // Hàm private giả lập luồng gọi Gemini
@@ -74,4 +101,31 @@ export class TestService {
   //     );
   // TODO: Implement logic gửi finalCode, promptLogs, ideEvents vào Gemini 3.1 Pro ở đây
   //   }
+
+  // Thêm tham số finalCode vào đây
+  async submitAndTriggerGrading(sessionId: string, finalCode: any) {
+    const session = await this.prisma.testSession.update({
+      where: { id: sessionId },
+      data: {
+        endTime: new Date(),
+        finalCode: finalCode, // Lưu toàn bộ mã nguồn vào DB để AI chấm
+      },
+      include: {
+        application: true,
+      },
+    });
+
+    await this.prisma.application.update({
+      where: { id: session.applicationId },
+      data: {
+        status: 'REVIEWING',
+      },
+    });
+
+    // ... (Phần logic gọi Agentic AI chấm điểm của bạn giữ nguyên)
+
+    return {
+      message: 'Nộp bài thành công. Luồng chấm điểm AI đã được kích hoạt.',
+    };
+  }
 }

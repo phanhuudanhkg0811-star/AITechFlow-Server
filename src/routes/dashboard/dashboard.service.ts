@@ -5,6 +5,67 @@ import { PrismaService } from 'src/shared/services/prisma.service';
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
+  async getDashboardStats(hrUserId: string) {
+    // 1. Tìm tất cả các Job do HR này tạo
+    const myJobs = await this.prisma.jobDescription.findMany({
+      where: { creatorId: hrUserId },
+      select: { id: true },
+    });
+
+    const jobIds = myJobs.map((job) => job.id);
+
+    if (jobIds.length === 0) {
+      return { totalCandidates: 0, runningTests: 0, analyzedByAI: 0, hired: 0 };
+    }
+
+    // 2. Chạy 4 query song song bằng Promise.all để tối ưu tốc độ
+    const [totalCandidates, runningTests, analyzedByAI, hired] =
+      await Promise.all([
+        // Tổng số hồ sơ
+        this.prisma.application.count({ where: { jobId: { in: jobIds } } }),
+        // Bài test đang làm (TESTING)
+        this.prisma.application.count({
+          where: { jobId: { in: jobIds }, status: 'TESTING' },
+        }),
+        // Đã nộp bài và đang/đã chấm (REVIEWING hoặc COMPLETED)
+        this.prisma.application.count({
+          where: {
+            jobId: { in: jobIds },
+            status: { in: ['REVIEWING', 'COMPLETED'] },
+          },
+        }),
+        // Đã duyệt thành công (COMPLETED)
+        this.prisma.application.count({
+          where: { jobId: { in: jobIds }, status: 'COMPLETED' },
+        }),
+      ]);
+
+    return { totalCandidates, runningTests, analyzedByAI, hired };
+  }
+
+  async getRecentApplications(hrUserId: string) {
+    // Lấy 5 ứng dụng mới nhất thuộc về các job của HR này
+    const apps = await this.prisma.application.findMany({
+      where: {
+        job: { creatorId: hrUserId },
+      },
+      take: 5,
+      include: {
+        user: { select: { name: true, email: true } },
+        job: { select: { title: true } },
+      },
+    });
+
+    // Format lại dữ liệu cho khớp với interface ở Frontend
+    return apps.map((app) => ({
+      id: app.id.substring(0, 8).toUpperCase(), // Rút gọn UUID cho đẹp
+      candidate: app.user.name || app.user.email.split('@')[0],
+      job: app.job.title,
+      score: app.matchScore, // Lấy điểm matchScore (đã chấm)
+      status: app.status,
+    }));
+  }
+
   async getHrJobs(hrUserId: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
 
@@ -79,5 +140,25 @@ export class DashboardService {
       },
       leaderboard: candidates,
     };
+  }
+
+  // Trong class DashboardService
+  async getApplicationDetail(applicationId: string) {
+    const application = await this.prisma.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        user: true,
+        job: true,
+        testSession: {
+          include: { conversations: true },
+        },
+        report: true,
+      },
+    });
+
+    if (!application) throw new NotFoundException('Không tìm thấy ứng viên');
+
+    // Trả về toàn bộ object, trong đó có sẵn application.cvText
+    return application;
   }
 }

@@ -55,7 +55,6 @@ export class AuthService {
       });
     }
 
-    // --- (Phần code sinh Token và tạo Session giữ nguyên như cũ của bạn) ---
     const payload = { sub: user.id, email: user.email, role: user.role };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtAuthService.signAccessToken(payload),
@@ -150,5 +149,25 @@ export class AuthService {
       console.error('Logout Error:', error);
       throw new UnauthorizedException('Đăng xuất không thành công');
     }
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        githubUsername: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return user;
   }
 }

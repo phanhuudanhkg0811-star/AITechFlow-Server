@@ -16,6 +16,24 @@ import { RolesGuard } from 'src/shared/guards/role.guard';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
+  // --- API Lấy Thống kê Tổng quan ---
+  @Get('stats')
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  async getDashboardStats(@Req() req: Request & { user: { sub: string } }) {
+    const userId = req.user.sub;
+    return this.dashboardService.getDashboardStats(userId);
+  }
+
+  // --- API Lấy Danh sách ứng viên gần đây ---
+  @Get('recent-applications')
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  async getRecentApplications(@Req() req: Request & { user: { sub: string } }) {
+    const userId = req.user.sub;
+    return this.dashboardService.getRecentApplications(userId);
+  }
+
   @Get('my-jobs')
   @Roles('HR', 'TECH_LEAD')
   @UseGuards(RolesGuard)
@@ -40,5 +58,12 @@ export class DashboardController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.dashboardService.getJobLeaderboard(jobId, page, limit);
+  }
+
+  @Get('applications/:id')
+  @Roles('HR', 'TECH_LEAD')
+  @UseGuards(RolesGuard)
+  async getApplicationDetail(@Param('id') id: string) {
+    return this.dashboardService.getApplicationDetail(id);
   }
 }
