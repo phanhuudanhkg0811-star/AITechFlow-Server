@@ -1,98 +1,74 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/lucide-react/lucide/main/icons/cpu.svg" width="80" height="80" />
+  <h1>⚙️ AI-TechFlow Backend Core</h1>
+  <p><b>The Orchestration Engine for AI-Driven Recruitment</b></p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+  <p>
+    <img src="https://img.shields.io/badge/Framework-NestJS_11-E0234E?style=flat-square&logo=nestjs" />
+    <img src="https://img.shields.io/badge/Database-PostgreSQL_%2B_pgvector-316192?style=flat-square&logo=postgresql" />
+    <img src="https://img.shields.io/badge/ORM-Prisma-2D3748?style=flat-square&logo=prisma" />
+    <img src="https://img.shields.io/badge/AI-Google_Gemini_Pro-8E75B2?style=flat-square&logo=googlebard" />
+    <img src="https://img.shields.io/badge/Security-JWT_%2B_Cookies-black?style=flat-square" />
+  </p>
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+  <p><i>Hệ thống lõi điều phối quy trình tuyển dụng tự động, xử lý Vector Embedding và phân tích mã nguồn ứng viên.</i></p>
+</div>
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🏗️ Kiến trúc Hệ thống
 
-## Project setup
+Backend được xây dựng theo kiến trúc **Modular Design** của NestJS, đảm bảo tính mở rộng và dễ dàng bảo trì.
 
-```bash
-$ npm install
-```
+### 🛰️ Các Module chính
+* **Auth Module:** Xử lý xác thực OAuth2 qua GitHub, quản lý Session và xoay vòng JWT (Access/Refresh Token) qua HTTP-only Cookies để bảo mật tối đa.
+* **AI Module:** "Bộ não" của hệ thống, điều phối các yêu cầu đến Google Gemini API (Suggestion, Quick Edit, Embedding).
+* **Job & Application Module:** Quản lý vòng đời của tin tuyển dụng và hồ sơ ứng viên, tích hợp tính toán độ tương quan Vector.
+* **Test & Conversation Module:** Quản lý phiên làm bài thi Web-IDE và hệ thống Chatbot hỗ trợ ứng viên dựa trên ngữ cảnh mã nguồn (Context-Aware).
+* **Shared Module:** Cung cấp các dịch vụ dùng chung như Prisma, Mailer và các Guards bảo mật.
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## 🧠 AI Pipeline & Vector Processing (Deep Dive)
 
-# watch mode
-$ npm run start:dev
+Đây là phần "ngầu" nhất của hệ thống, nơi AI thực sự thay thế con người trong các tác vụ lặp đi lặp lại.
 
-# production mode
-$ npm run start:prod
-```
+### 🧬 Quy trình Sàng lọc Vector (Vector Screening)
+Hệ thống sử dụng model `gemini-embedding-001` để chuyển đổi mô tả công việc (JD) và nội dung CV thành các Vector 3072 chiều. 
+* Phép toán **Cosine Similarity** (`<=>`) được thực hiện trực tiếp trong PostgreSQL thông qua `pgvector` để tìm ra độ tương đồng chính xác nhất giữa ứng viên và yêu cầu.
 
-## Run tests
+### 🤖 Agentic Pipeline (Background Job)
+Dịch vụ `AiPipelineService` chạy định kỳ (Cronjob) để thực hiện chuỗi hành động:
+1.  **IMAP Sync:** Kết nối đến hòm thư HR qua giao thức IMAP để quét email ứng tuyển mới.
+2.  **PDF Parsing:** Trích xuất văn bản từ CV PDF đính kèm.
+3.  **GitHub Integrity Check:** AI tự động truy cập GitHub của ứng viên, phân tích `README` và cấu trúc mã nguồn để đánh giá tính thực chiến (Integrity Score).
+4.  **Auto-Invitation:** Nếu điểm Match Score đạt ngưỡng, hệ thống tự động tạo User, Test Session và gửi email mời thi qua SMTP.
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## 🛠️ Tech Stack & Cấu trúc Dữ liệu
 
-# test coverage
-$ npm run test:cov
-```
+* **Runtime:** Node.js (TypeScript).
+* **Database Schema (Prisma):** * Sử dụng `Unsupported("vector(3072)")` để hỗ trợ lưu trữ Vector Embedding.
+    * Hỗ trợ quan hệ Cascade: Khi xóa một Job, các Scenarios và Applications liên quan sẽ được dọn dẹp sạch sẽ.
+* **Validation:** Toàn bộ dữ liệu đầu vào được kiểm soát chặt chẽ bởi `Zod` thông qua `CustomZodValidationPipe`.
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 🚀 Cấu hình & Triển khai
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 1. Yêu cầu môi trường
+* PostgreSQL 15+ (Đã cài extension `pgvector`).
+* Google Gemini API Key (Cần cho các tính năng AI).
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+### 2. Biến môi trường (.env)
+```env
+DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
+SECRET_API_KEY="AIzaSy..." # Google Gemini Key
+ACCESS_TOKEN_SECRET="your-secret"
+REFRESH_TOKEN_SECRET="your-refresh-secret"
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Email Config (IMAP/SMTP)
+HR_ACCOUNTS='[{"email":"hr@company.com", "appPassword":"..."}]'
+SMTP_USER="sender@company.com"
+SMTP_PASS="password"
