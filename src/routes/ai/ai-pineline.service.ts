@@ -18,22 +18,39 @@ import { simpleParser } from 'mailparser';
 import { CvScreeningService } from './ai-cv-screening.service';
 import { EmailService } from 'src/shared/services/mail.service';
 import { PDFParse } from 'pdf-parse';
-
-interface GithubRepo {
-  name: string;
-  language: string | null;
-  description: string | null;
-}
-
-interface IntegrityReport {
-  integrityScore: number;
-  analysis: string;
-  redFlags: string[];
-}
+import path from 'node:path';
+import { spawn } from 'node:child_process';
 
 interface HrEmailConfig {
   email: string;
   appPassword: string;
+}
+
+// Định nghĩa cấu trúc JSON trả về từ file tech_review_agentv3.1.py
+interface TechReviewPythonResult {
+  verdict: 'PASS' | 'FAIL' | 'BORDERLINE';
+  overall_score: number; // Điểm hệ 10 từ script Python
+  seniority_estimate: 'Junior' | 'Mid-level' | 'Senior' | 'Staff';
+  job_fit: {
+    is_fit: boolean;
+    reason: string;
+  };
+  architecture: {
+    pattern: string;
+    summary: string;
+    scalability: string;
+  };
+  solid_scores: Record<string, { score: number; comment: string }>;
+  issues: Array<{
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    file: string;
+    line_hint: string;
+    description: string;
+    suggestion: string;
+  }>;
+  strengths: string[];
+  red_flags: string[];
+  interview_questions: string[];
 }
 
 @Injectable()
@@ -73,7 +90,6 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // 👉 Tách riêng logic kết nối thành một hàm độc lập
   private async connectImap(account: HrEmailConfig) {
     const client = new ImapFlow({
       host: envConfig.IMAP_HOST || 'imap.gmail.com',
@@ -84,7 +100,7 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
         pass: account.appPassword,
       },
       logger: false,
-      socketTimeout: 60000,
+      socketTimeout: 0,
       connectionTimeout: 30000,
     });
 
@@ -145,7 +161,7 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleIncomingApplications() {
     if (this.imapClients.size === 0) return;
     this.logger.log('🔍 Bắt đầu quét email...');
@@ -307,34 +323,71 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
       await parser.destroy();
 
       // 2. Chấm điểm Github Integrity (Giữ nguyên logic cũ của bạn)
-      const githubUsername = this.extractGithubUsername(cvText);
-      let githubAnalysisResult: IntegrityReport | null = null;
-
-      if (githubUsername) {
-        const githubStats = await this.fetchGitHubStats(githubUsername);
-        const sourceCodeInfo = await this.fetchGitHubSourceCode(githubUsername);
-        if (githubStats.length > 0) {
-          githubAnalysisResult = await this.evaluateProfileIntegrity(
-            cvText,
-            githubStats,
-            sourceCodeInfo,
-          );
-        }
-      }
-
-      // 3. Tính điểm CV Match TRỰC TIẾP (Chưa tạo User)
       this.logger.log(`🎯 [${candidateEmail}] Calculating CV match score...`);
       const { score: matchScore, vectorString } =
         await this.cvScreeningService.evaluateTextMatching(cvText, job.id);
       this.logger.log(`📈 [${candidateEmail}] Match score: ${matchScore}%`);
 
+      // 3. Chạy Python Agent để review code (nếu có Github)
+      const githubUrls = this.extractGithubUrls(cvText);
+      let techReviewResult: TechReviewPythonResult | null = null;
+      let bestRepoUrl = '';
+
+      if (githubUrls.length > 0) {
+        this.logger.log(
+          `🤖 [${candidateEmail}] Tìm thấy ${githubUrls.length} repo. Bắt đầu phân tích tìm repo tốt nhất...`,
+        );
+
+        // Duyệt qua từng link (chạy tuần tự để tránh chạm giới hạn API Rate Limit của Gemini)
+        for (const url of githubUrls) {
+          const currentResult = await this.runTechReviewPython(
+            url,
+            job.content,
+          );
+
+          if (currentResult) {
+            this.logger.log(
+              `   👉 Repo [${url}] đạt ${currentResult.overall_score}/10 điểm.`,
+            );
+
+            // Nếu chưa có kết quả nào, hoặc kết quả repo này cao điểm hơn repo trước đó
+            if (
+              !techReviewResult ||
+              currentResult.overall_score > techReviewResult.overall_score
+            ) {
+              techReviewResult = currentResult;
+              bestRepoUrl = url;
+            }
+          }
+        }
+
+        if (techReviewResult) {
+          this.logger.log(
+            `🏆 [${candidateEmail}] Đã chọn Repo xuất sắc nhất: ${bestRepoUrl} (Điểm: ${techReviewResult.overall_score}/10)`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ [${candidateEmail}] Không phân tích thành công repo nào trong danh sách.`,
+          );
+        }
+      }
+
       // 4. Quyết định Đậu / Rớt
       const MATCH_THRESHOLD = 70;
-      const INTEGRITY_THRESHOLD = 60;
-      const integrityScore = githubAnalysisResult?.integrityScore ?? 100;
-      const isQualified =
-        matchScore >= MATCH_THRESHOLD && integrityScore >= INTEGRITY_THRESHOLD;
+      const isCvMatch = matchScore >= MATCH_THRESHOLD;
+      // Chỉ cần pass vòng CV và không bị FAIL vòng code là được
+      const isTechReviewPass =
+        !techReviewResult || techReviewResult.verdict !== 'FAIL';
+      const isQualified = isCvMatch && isTechReviewPass;
 
+      this.logger.log(
+        `⚖️ [${candidateEmail}] CV Match: ${isCvMatch} (${matchScore}%)`,
+      );
+      this.logger.log(
+        `⚖️ [${candidateEmail}] Tech Review: ${
+          techReviewResult ? techReviewResult.verdict : 'N/A'
+        }`,
+      );
       this.logger.log(`⚖️ [${candidateEmail}] Qualified: ${isQualified}`);
 
       if (isQualified) {
@@ -360,13 +413,15 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
           UPDATE "Application" SET "cvEmbedding" = '${vectorString}'::vector WHERE id = '${application.id}'
         `);
 
-        // Lưu Report đánh giá Github
-        if (githubAnalysisResult) {
+        // Lưu Report đánh giá Github từ Python Agent
+        if (techReviewResult) {
+          const techSummary = `### Tech Review Summary (Best Repo)\n**Nguồn:** ${bestRepoUrl}\n**Verdict:** ${techReviewResult.verdict} (${techReviewResult.overall_score}/10)\n**Seniority Estimate:** ${techReviewResult.seniority_estimate}\n**Job Fit:** ${techReviewResult.job_fit.is_fit ? 'Fit' : 'Not a Fit'}. Reason: ${techReviewResult.job_fit.reason}\n**Architecture:** Pattern: ${techReviewResult.architecture.pattern}. Summary: ${techReviewResult.architecture.summary}.\n**Strengths:**\n- ${techReviewResult.strengths.join('\n- ')}`;
+
           await this.prisma.assessmentReport.create({
             data: {
               applicationId: application.id,
-              summary: githubAnalysisResult.analysis,
-              riskFlags: githubAnalysisResult.redFlags as any,
+              summary: techSummary,
+              riskFlags: techReviewResult.red_flags as any,
             },
           });
         }
@@ -406,168 +461,110 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private extractGithubUsername(text: string): string | null {
-    const githubRegex = /https?:\/\/(www\.)?github\.com\/([a-zA-Z0-9_-]+)/i;
-    const match = text.match(githubRegex);
-    return match ? match[2] : null;
-  }
-
-  private async fetchGitHubStats(username: string): Promise<GithubRepo[]> {
-    try {
-      const response = await fetch(
-        `https://api.github.com/users/${username}/repos?sort=updated&per_page=5`,
-      );
-      if (!response.ok) return [];
-      const repos = (await response.json()) as Array<{
-        name: string;
-        language: string;
-        description: string;
-      }>;
-      return repos.map((repo) => ({
-        name: repo.name,
-        language: repo.language || null,
-        description: repo.description || null,
-      }));
-    } catch (error) {
-      this.logger.warn(`Lỗi fetch GitHub stats cho ${username}`);
-      return [];
-    }
-  }
-
-  private async fetchGitHubSourceCode(username: string): Promise<string> {
-    try {
-      const repoRes = await fetch(
-        `https://api.github.com/users/${username}/repos?sort=updated&per_page=1`,
-      );
-      const repos = await repoRes.json();
-      if (!repos || repos.length === 0) return 'Không có public repo.';
-
-      const latestRepo = repos[0].name;
-
-      const readmeRes = await fetch(
-        `https://api.github.com/repos/${username}/${latestRepo}/readme`,
-        { headers: { Accept: 'application/vnd.github.v3.raw' } },
-      );
-      const readmeContent = readmeRes.ok
-        ? await readmeRes.text()
-        : 'Không có README.';
-
-      const treeRes = await fetch(
-        `https://api.github.com/repos/${username}/${latestRepo}/git/trees/main?recursive=1`,
-      );
-      const treeData = await treeRes.json();
-
-      let fileStructure = '';
-      if (treeData.tree) {
-        const filteredPaths = treeData.tree
-          .map((t: { path: string }) => t.path)
-          .filter((path: string) => {
-            if (
-              path.includes('node_modules') ||
-              path.includes('.git') ||
-              path.includes('dist') ||
-              path.includes('build') ||
-              path.includes('src/generated') ||
-              path.includes('prisma/migrations')
-            )
-              return false;
-            if (path.endsWith('.spec.ts') || path.endsWith('.test.ts'))
-              return false;
-            const isRootConfigFile =
-              /^[^/]+\.(json|yaml|yml|js|config\.js|lock|md|env.*)$/i.test(
-                path,
-              );
-            if (isRootConfigFile && path !== 'package.json') return false;
-            const isInMainFolders =
-              path.startsWith('src/') ||
-              path.startsWith('app/') ||
-              path.startsWith('lib/');
-            const isSourceCode =
-              /\.(ts|tsx|js|jsx|py|java|go|php|cs|cpp|c)$/i.test(path);
-            return isInMainFolders || isSourceCode || path === 'package.json';
-          });
-        fileStructure = filteredPaths.slice(0, 100).join('\n');
-      }
-
-      return `
-        - Repo: ${latestRepo}
-        - Cấu trúc thư mục mã nguồn lõi:
-        ${fileStructure}
-        
-        - Nội dung README:
-        ${readmeContent}
-      `;
-    } catch (error) {
-      this.logger.warn(`Không thể lấy source code của ${username}`);
-      return 'Lỗi khi truy xuất mã nguồn.';
-    }
-  }
-
-  private async evaluateProfileIntegrity(
-    cvText: string,
-    githubStats: GithubRepo[],
-    sourceCodeInfo: string,
-  ): Promise<IntegrityReport | null> {
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: { responseMimeType: 'application/json' },
-    });
-
-    const truncatedCv = cvText.slice(0, 2000);
-    const truncatedSource = sourceCodeInfo.slice(0, 3000);
-
-    const prompt = `
-      Bạn là một Technical Lead. Hãy đánh giá tính toàn vẹn của ứng viên dựa trên:
-      1. CV: """${truncatedCv}"""
-      2. Thông tin GitHub repo: """${JSON.stringify(githubStats)}"""
-      3. Chi tiết mã nguồn (cấu trúc thư mục + README): """${truncatedSource}"""
-
-      Nhiệm vụ:
-      - So sánh kinh nghiệm trong CV với chất lượng thực tế từ GitHub.
-      - Đưa ra điểm integrityScore (0-100).
-      - Liệt kê các redFlags (nếu có, ví dụ: "Không có dự án thực tế nào", "README rỗng", "CV phóng đại kinh nghiệm").
-
-      Trả về CHÍNH XÁC định dạng JSON:
-      {
-        "integrityScore": number,
-        "analysis": "tóm tắt phát hiện",
-        "redFlags": ["cờ đỏ 1", "cờ đỏ 2"]
-      }
-    `;
-
-    try {
-      const result = await model.generateContent(prompt);
-      const jsonString = result.response.text();
-      const parsedData = JSON.parse(jsonString) as IntegrityReport;
-      return parsedData;
-    } catch (error) {
-      this.logger.error('Lỗi khi AI phân tích integrity:', error);
-      return {
-        integrityScore: 50,
-        analysis: 'Không thể phân tích do lỗi AI.',
-        redFlags: ['Lỗi hệ thống khi đánh giá'],
-      };
-    }
-  }
-
-  private extractGithubRepoUrls(text: string): string[] {
-    // Regex khớp với các dạng URL GitHub repo:
-    // https://github.com/user/repo
-    // http://github.com/user/repo
-    // github.com/user/repo
+  private extractGithubUrls(text: string): string[] {
     const repoRegex =
-      /(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+)/gi;
-    const matches = text.matchAll(repoRegex);
-    const urls: string[] = [];
-    for (const match of matches) {
-      // match[0] là URL đầy đủ (có thể thiếu protocol)
-      let url = match[0];
-      if (!url.startsWith('http')) {
-        url = 'https://' + url;
-      }
-      urls.push(url);
+      /https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+/gi;
+    const repoMatches = text.match(repoRegex);
+
+    if (repoMatches && repoMatches.length > 0) {
+      // Bỏ trùng lặp và CHỈ LẤY TỐI ĐA 3 LINK đầu tiên
+      const uniqueRepos = [...new Set(repoMatches)].slice(0, 3);
+      this.logger.log(
+        `🔍 Tìm thấy các link Github Repo hợp lệ: ${uniqueRepos.join(', ')}`,
+      );
+      return uniqueRepos;
     }
-    // Loại bỏ trùng lặp
-    return [...new Set(urls)];
+
+    const profileRegex = /https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i;
+    const profileMatch = text.match(profileRegex);
+    if (profileMatch) {
+      this.logger.warn(
+        `⚠️ Ứng viên để link Profile (${profileMatch[0]}) nhưng không có Repo cụ thể.`,
+      );
+    }
+
+    return []; // Trả về mảng rỗng nếu không có link repo nào
+  }
+
+  private async runTechReviewPython(
+    githubUrl: string,
+    jobDescription: string,
+  ): Promise<TechReviewPythonResult | null> {
+    return new Promise((resolve) => {
+      // Xác định đường dẫn tuyệt đối đến thư mục src/shared/scripts
+      const scriptPath = path.join(
+        process.cwd(),
+        'src',
+        'shared',
+        'scripts',
+        'tech_review_agentv3.1.py',
+      );
+
+      // Lấy API Key từ biến môi trường (Hoặc dùng ConfigService tùy dự án của bạn)
+      const apiKey = envConfig.SECRET_API_KEY;
+
+      this.logger.log(
+        `🐍 [Python Spawn] Đang kích hoạt Review Agent cho repo: ${githubUrl}`,
+      );
+
+      // Sử dụng spawn truyền đối số mảng để chống lỗ hổng Command Injection
+      const pythonProcess = spawn(
+        'python',
+        [
+          scriptPath,
+          '--github',
+          githubUrl,
+          '--key',
+          apiKey,
+          '--job',
+          jobDescription,
+        ],
+        {
+          env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+        },
+      );
+
+      let stdoutData = '';
+      let stderrData = '';
+
+      // Đọc luồng dữ liệu JSON kết quả (stdout)
+      pythonProcess.stdout.on('data', (data) => {
+        stdoutData += data.toString();
+      });
+
+      // Đọc luồng hiển thị tiến trình, log debug hoặc lỗi (stderr)
+      pythonProcess.stderr.on('data', (data) => {
+        stderrData += data.toString();
+      });
+
+      // Xử lý khi script chạy xong hoàn toàn
+      pythonProcess.on('close', (code) => {
+        // Đẩy toàn bộ log tiến trình của Python vào Terminal của NestJS để dễ dàng theo dõi
+        if (stderrData) {
+          this.logger.debug(`[Python Agent Progress]:\n${stderrData.trim()}`);
+        }
+
+        if (code !== 0) {
+          this.logger.error(`❌ Script Python kết thúc với mã lỗi: ${code}`);
+          return resolve(null);
+        }
+
+        try {
+          // Parse dòng kết quả JSON duy nhất từ stdout
+          const cleanJson: TechReviewPythonResult = JSON.parse(
+            stdoutData.trim(),
+          );
+          return resolve(cleanJson);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown Error';
+          this.logger.error(
+            `❌ Lỗi đồng bộ cấu trúc JSON từ Python: ${errorMessage}`,
+          );
+          this.logger.error(`Dữ liệu thô nhận được: ${stdoutData}`);
+          return resolve(null);
+        }
+      });
+    });
   }
 }

@@ -24,7 +24,6 @@ export class JobService {
 
       const genAI = new GoogleGenerativeAI(envConfig.SECRET_API_KEY);
 
-      // ĐÂY LÀ CHÂN ÁI NĂM 2026: gemini-embedding-001
       const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
 
       const result = await model.embedContent(text);

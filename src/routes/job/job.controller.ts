@@ -21,7 +21,7 @@ import { RolesGuard } from 'src/shared/guards/role.guard';
 export class JobsController {
   constructor(
     private readonly jobService: JobService,
-    private readonly prisma: PrismaService, // Vẫn giữ Prisma ở đây cho API Get tạm thời
+    private readonly prisma: PrismaService,
   ) {}
 
   // API lấy tất cả Job (Có thể public hoặc chặn tùy bạn)
@@ -63,8 +63,8 @@ export class JobsController {
   @UseGuards(RolesGuard)
   async update(
     @Param('id') id: string,
-    @Body() dto: CreateJobWithScenarioDto, // <-- Đổi type ở đây
-    @Req() req: Request & { user: { sub: string } }
+    @Body() dto: CreateJobWithScenarioDto,
+    @Req() req: Request & { user: { sub: string } },
   ) {
     return this.jobService.updateJob(id, req.user.sub, dto);
   }

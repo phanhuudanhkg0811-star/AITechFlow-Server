@@ -17,7 +17,7 @@ export class PrismaService extends PrismaClient {
     const adapter = new PrismaPg({
       connectionString,
     });
-    super({ adapter, log: ['info', 'warn', 'error', 'query'] });
+    super({ adapter, log: ['info', 'warn', 'error'] });
   }
 
   async onModuleInit() {
