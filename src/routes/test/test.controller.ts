@@ -76,4 +76,17 @@ export class TestsController {
   ) {
     return this.testsService.submitAndTriggerGrading(sessionId, finalCode);
   }
+
+  //endpoint bắt lỗi gian lận
+  @Post(':id/events')
+  async logEvent(
+    @Param('id') sessionId: string,
+    @Body() body: { eventType: 'PASTE_EVENT' | 'TAB_SWITCH'; payload: any },
+  ) {
+    return this.testsService.logIdeEvent(
+      sessionId,
+      body.eventType,
+      body.payload,
+    );
+  }
 }

@@ -42,26 +42,23 @@ export class DashboardService {
 
     return { totalCandidates, runningTests, analyzedByAI, hired };
   }
-
+  //Lấy tất cả application, order từ mới nhất đến cũ nhất
   async getRecentApplications(hrUserId: string) {
-    // Lấy 5 ứng dụng mới nhất thuộc về các job của HR này
     const apps = await this.prisma.application.findMany({
       where: {
         job: { creatorId: hrUserId },
       },
-      take: 5,
       include: {
         user: { select: { name: true, email: true } },
         job: { select: { title: true } },
       },
     });
 
-    // Format lại dữ liệu cho khớp với interface ở Frontend
     return apps.map((app) => ({
-      id: app.id.substring(0, 8).toUpperCase(), // Rút gọn UUID cho đẹp
+      id: app.id,
       candidate: app.user.name || app.user.email.split('@')[0],
       job: app.job.title,
-      score: app.matchScore, // Lấy điểm matchScore (đã chấm)
+      score: app.matchScore,
       status: app.status,
     }));
   }

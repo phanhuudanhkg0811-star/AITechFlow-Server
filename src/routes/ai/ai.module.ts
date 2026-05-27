@@ -9,5 +9,6 @@ import { SharedModule } from 'src/shared/shared.module';
   imports: [SharedModule],
   providers: [AiService, AiPipelineService, CvScreeningService],
   controllers: [AiController],
+  exports: [AiService],
 })
 export class AiModule {}

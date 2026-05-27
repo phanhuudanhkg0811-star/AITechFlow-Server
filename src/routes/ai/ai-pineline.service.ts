@@ -347,7 +347,7 @@ export class AiPipelineService implements OnModuleInit, OnModuleDestroy {
 
           if (currentResult) {
             this.logger.log(
-              `   👉 Repo [${url}] đạt ${currentResult.overall_score}/10 điểm.`,
+              `Repo [${url}] đạt ${currentResult.overall_score}/10 điểm.`,
             );
 
             // Nếu chưa có kết quả nào, hoặc kết quả repo này cao điểm hơn repo trước đó

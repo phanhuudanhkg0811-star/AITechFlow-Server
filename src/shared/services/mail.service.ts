@@ -60,4 +60,24 @@ export class EmailService {
     `;
     return this.sendMail(email, subject, html);
   }
+
+  // THÊM: Phương thức gửi email chúc mừng đậu bài test
+  sendTestPassedCongratulation(email: string, name: string, score: number) {
+    const subject = `[AI-TechFlow] Chúc mừng bạn đã hoàn thành xuất sắc bài kiểm tra kỹ thuật!`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <h2 style="color: #4f46e5;">Chúc mừng, ${name}!</h2>
+        <p>Hệ thống đánh giá tự động <b>AI-TechFlow</b> xin thông báo bài làm Web-IDE của bạn đã được chấm điểm hoàn tất.</p>
+        <p>Kết quả phân tích mã nguồn của bạn đã đạt yêu cầu kỹ thuật từ đội ngũ Tech Lead của chúng tôi với điểm số ấn tượng: <b>${score}/100 điểm</b>.</p>
+        <div style="background-color: #f5f3ff; padding: 15px; border-left: 4px solid #7c3aed; margin: 20px 0;">
+          <p style="margin: 0; font-weight: bold; color: #6d28d9;">Bước tiếp theo:</p>
+          <p style="margin: 5px 0 0 0;">Bộ phận HR sẽ liên hệ với bạn trong vòng 24-48 giờ tới để sắp xếp một buổi phỏng vấn trực tiếp (vòng Interview) cùng với Tech Lead.</p>
+        </div>
+        <p>Cảm ơn bạn đã dành thời gian tham gia thử thách công nghệ của AI-TechFlow!</p>
+        <br/>
+        <p style="font-size: 12px; color: #6b7280;">Đây là email tự động từ hệ thống AI-TechFlow Screening Pipeline.</p>
+      </div>
+    `;
+    return this.sendMail(email, subject, html);
+  }
 }

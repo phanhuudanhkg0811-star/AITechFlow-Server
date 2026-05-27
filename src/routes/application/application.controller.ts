@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Controller, Get, Request } from '@nestjs/common';
 import { ApplicationService } from './application.service';
-// Lưu ý: Không cần khai báo @UseGuards vì AuthenticationGuard của ông
-// đã được cấu hình "Secure by default" (khóa mặc định bằng Bearer Token) rồi!
 
 @Controller('application')
 export class ApplicationController {
