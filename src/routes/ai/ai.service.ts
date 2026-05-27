@@ -39,7 +39,7 @@ export class AiService {
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-3-flash-preview',
       });
 
       const result = await model.generateContent(prompt);
@@ -84,7 +84,7 @@ export class AiService {
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-3-flash-preview',
       });
 
       const result = await model.generateContent(prompt);

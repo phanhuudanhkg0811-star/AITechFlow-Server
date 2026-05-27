@@ -63,7 +63,7 @@ export class ConversationService {
     try {
       // Dùng model mạnh hơn cho logic coding (flash hoặc pro tùy bạn cấu hình)
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-3.1-flash-lite-preview', // Khuyến nghị dùng model tốt để code chính xác
+        model: 'gemini-3-flash-preview', // Khuyến nghị dùng model tốt để code chính xác
       });
 
       const recentMessages = await this.prisma.message.findMany({
