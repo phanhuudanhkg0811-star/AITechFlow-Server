@@ -16,8 +16,6 @@ export class AiService {
   async generateCodeSuggestion(payload: any, retries = 2): Promise<string> {
     const {
       fileName,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      currentLine,
       textBeforeCursor,
       textAfterCursor,
       previousLines,

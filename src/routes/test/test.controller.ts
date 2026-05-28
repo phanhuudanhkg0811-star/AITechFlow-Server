@@ -32,38 +32,6 @@ export class TestsController {
     return this.testsService.renameTestScenario(sessionId, newTitle);
   }
 
-  @Get('my-tests')
-  // @UseGuards(JwtAuthGuard)
-  async getMyApplications(@Request() req) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const userId = req.user.id; // Lấy từ token đăng nhập
-
-    const apps = await this.prisma.application.findMany({
-      where: { userId: userId },
-      select: {
-        id: true,
-        status: true,
-        job: { select: { title: true } },
-        testSession: {
-          select: {
-            id: true,
-            scenario: {
-              select: {
-                title: true,
-                difficulty: true,
-                timeLimit: true,
-                context: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { status: 'asc' }, // Ưu tiên xếp TESTING lên đầu
-    });
-
-    return apps;
-  }
-
   @Get(':id')
   async getTestSession(@Param('id') sessionId: string) {
     return this.testsService.getTestSession(sessionId);
