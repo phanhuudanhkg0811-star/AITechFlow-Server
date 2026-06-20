@@ -25,7 +25,7 @@ export class DashboardController {
     return this.dashboardService.getDashboardStats(userId);
   }
 
-  // --- API Lấy Danh sách ứng viên gần đây ---
+  // --- Lấy Danh sách ứng viên ---
   @Get('recent-applications')
   @Roles('HR', 'TECH_LEAD')
   @UseGuards(RolesGuard)
