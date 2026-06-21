@@ -5,6 +5,16 @@ import { OAuthProfile } from './auth.model';
 import { AuthService } from './auth.service';
 import { IsPublic } from 'src/shared/decorators/auth.decorator';
 
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite:
+    process.env.NODE_ENV === 'production'
+      ? ('none' as const)
+      : ('lax' as const),
+  path: '/',
+});
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -34,12 +44,7 @@ export class AuthController {
       await this.authService.validateOAuthLogin(profile, ipAddress, userAgent);
 
     // Cấu hình chung cho Cookie
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
+    const cookieOptions = getCookieOptions();
 
     // Set Refresh Token (sống lâu)
     res.cookie('refreshToken', refreshToken, {
@@ -65,12 +70,7 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
+    const cookieOptions = getCookieOptions();
 
     // Xóa cả 2 cookie
     res.clearCookie('refreshToken', cookieOptions);
@@ -101,12 +101,7 @@ export class AuthController {
       userAgent,
     );
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
+    const cookieOptions = getCookieOptions();
 
     // Set lại cả 2 Cookie mới
     res.cookie('refreshToken', refreshToken, {
