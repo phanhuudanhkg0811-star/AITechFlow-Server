@@ -12,6 +12,9 @@ import { DashboardModule } from './routes/dashboard/dashboard.module';
 import { ApplicationModule } from './routes/application/application.module';
 import { AiModule } from './routes/ai/ai.module';
 import { ConversationModule } from './routes/conversation/conversation.module';
+import { CompanyModule } from './routes/company/company.module';
+import { EmailAccountModule } from './routes/email-account/email-account.module';
+import { TemplateModule } from './routes/template/template.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { ConversationModule } from './routes/conversation/conversation.module';
     ApplicationModule,
     AiModule,
     ConversationModule,
+    CompanyModule,
+    EmailAccountModule,
+    TemplateModule,
   ],
   controllers: [AppController],
   providers: [

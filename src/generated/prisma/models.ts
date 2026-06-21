@@ -8,14 +8,17 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Company.js'
 export type * from './models/User.js'
 export type * from './models/Session.js'
+export type * from './models/EmailAccount.js'
+export type * from './models/Template.js'
 export type * from './models/JobDescription.js'
+export type * from './models/TestScenario.js'
 export type * from './models/Application.js'
 export type * from './models/TestSession.js'
 export type * from './models/IdeEvent.js'
 export type * from './models/AssessmentReport.js'
-export type * from './models/TestScenario.js'
 export type * from './models/Conversation.js'
 export type * from './models/Message.js'
 export type * from './commonInputTypes.js'

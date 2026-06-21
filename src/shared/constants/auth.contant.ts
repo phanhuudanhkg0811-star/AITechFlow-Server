@@ -30,9 +30,10 @@ export type TypeOfVerificationCodeType =
   (typeof TypeOfVerificationCode)[keyof typeof TypeOfVerificationCode];
 
 export const RoleType = {
+  ADMIN: 'ADMIN',
+  COMPANY_ROOT: 'COMPANY_ROOT',
   CANDIDATE: 'CANDIDATE',
   HR: 'HR',
-  TECH_LEAD: 'TECH_LEAD',
 } as const;
 
 export type RoleTypeType = (typeof RoleType)[keyof typeof RoleType];

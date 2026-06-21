@@ -1,197 +1,405 @@
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import type { Prisma, TestScenario } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/shared/services/prisma.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import envConfig from 'src/shared/config';
 import type { CreateJobWithScenarioDto } from './job.dto';
+import { AiService } from '../ai/ai.service';
+
+type ScenarioInput = NonNullable<CreateJobWithScenarioDto['scenarios']>[number];
 
 @Injectable()
 export class JobService {
   private readonly logger = new Logger(JobService.name);
-  private genAI: GoogleGenerativeAI;
 
-  constructor(private prisma: PrismaService) {
-    this.genAI = new GoogleGenerativeAI(envConfig.SECRET_API_KEY);
+  constructor(
+    private prisma: PrismaService,
+    private aiService: AiService,
+  ) {}
+
+  private async getDefaultCompanyId() {
+    const defaultCompany = await this.prisma.company.upsert({
+      where: { name: 'Default Company' },
+      update: {},
+      create: { name: 'Default Company' },
+    });
+
+    return defaultCompany.id;
   }
 
-  async generateEmbedding(text: string): Promise<number[]> {
+  private async getCompanyIdForCreator(creatorId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: creatorId },
+      select: { companyId: true },
+    });
+
+    if (user?.companyId) return user.companyId;
+
+    const companyId = await this.getDefaultCompanyId();
+    await this.prisma.user.update({
+      where: { id: creatorId },
+      data: { companyId },
+    });
+
+    return companyId;
+  }
+
+  private async findOrCreateLegacyEmailAccount(
+    email: string | undefined,
+    userId: string,
+    companyId: string,
+  ) {
+    if (!email) return null;
+
+    const existing = await this.prisma.emailAccount.findUnique({
+      where: { email },
+    });
+
+    if (existing) {
+      if (existing.companyId !== companyId) {
+        throw new UnprocessableEntityException(
+          'Email account belongs to another company',
+        );
+      }
+
+      return existing;
+    }
+
+    return this.prisma.emailAccount.create({
+      data: {
+        email,
+        encryptedPassword: '',
+        userId,
+        companyId,
+        isActive: false,
+      },
+    });
+  }
+
+  private async resolveEmailAccount(
+    dto: CreateJobWithScenarioDto,
+    userId: string,
+    companyId: string,
+  ) {
+    if (dto.emailAccountId) {
+      const emailAccount = await this.prisma.emailAccount.findUnique({
+        where: { id: dto.emailAccountId },
+      });
+
+      if (!emailAccount || emailAccount.companyId !== companyId) {
+        throw new UnprocessableEntityException(
+          'Email account does not belong to your company',
+        );
+      }
+
+      return emailAccount;
+    }
+
+    return this.findOrCreateLegacyEmailAccount(dto.hrEmail, userId, companyId);
+  }
+
+  private getScenarioInputs(dto: CreateJobWithScenarioDto): ScenarioInput[] {
+    const scenarioInputs = dto.scenarios?.length
+      ? dto.scenarios
+      : [
+          {
+            title: dto.scenarioTitle ?? 'Default Test',
+            difficulty: dto.difficulty ?? 'Junior',
+            timeLimit: dto.timeLimit ?? 90,
+            context: dto.scenarioContext ?? 'Complete the assigned task.',
+            isDefault: true,
+          },
+        ];
+
+    const defaultIndex = scenarioInputs.findIndex(
+      (scenario) => scenario.isDefault,
+    );
+
+    return scenarioInputs.map((scenario, index) => ({
+      ...scenario,
+      isDefault: defaultIndex === -1 ? index === 0 : index === defaultIndex,
+    }));
+  }
+
+  private async resolveInitialCode(
+    tx: Prisma.TransactionClient,
+    scenario: ScenarioInput,
+    companyId: string,
+  ): Promise<Prisma.InputJsonValue> {
+    if (scenario.templateId) {
+      const template = await tx.template.findFirst({
+        where: {
+          id: scenario.templateId,
+          OR: [{ isPublic: true }, { companyId }],
+        },
+        select: { initialCode: true },
+      });
+
+      if (!template) {
+        throw new UnprocessableEntityException(
+          'Template does not belong to your company',
+        );
+      }
+
+      return (template.initialCode ?? {}) as Prisma.InputJsonValue;
+    }
+
+    return (scenario.initialCode ?? {}) as Prisma.InputJsonValue;
+  }
+
+  async generateEmbedding(text: string, companyId?: string): Promise<number[]> {
     try {
-      this.logger.log('Bắt đầu nhúng Vector bằng SDK chính chủ...');
+      this.logger.log('Generating vector embedding with Gemini SDK...');
 
-      const genAI = new GoogleGenerativeAI(envConfig.SECRET_API_KEY);
-
-      const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
-
-      const result = await model.embedContent(text);
-      const embedding = result.embedding;
-
-      return embedding.values;
+      return this.aiService.generateEmbedding(text, { companyId });
     } catch (error: any) {
-      this.logger.error('Lỗi khi nhúng Vector bằng SDK:', error);
+      this.logger.error('Failed to generate vector embedding:', error);
       throw error;
     }
   }
-  // Gộp chung Transaction và AI vào một hàm
+
   async createJobAndScenario(dto: CreateJobWithScenarioDto, creatorId: string) {
-    this.logger.log(`Đang tạo Job Description: ${dto.title}`);
+    this.logger.log(`Creating job description: ${dto.title}`);
 
-    const existEmail = await this.prisma.jobDescription.findUnique({
-      where: {
-        hrEmail: dto.hrEmail,
-      },
-    });
+    const companyId = await this.getCompanyIdForCreator(creatorId);
+    const emailAccount = await this.resolveEmailAccount(
+      dto,
+      creatorId,
+      companyId,
+    );
 
-    if (existEmail) {
-      throw new UnprocessableEntityException(
-        'HR Email đã tồn tại, vui lòng chọn email khác cho job này!',
-      );
-    }
+    const scenarioInputs = this.getScenarioInputs(dto);
 
-    const { newJob, newScenario } = await this.prisma.$transaction(
+    const { newJob, newScenarios } = await this.prisma.$transaction(
       async (tx) => {
-        // 1.1. Tạo Job
         const job = await tx.jobDescription.create({
           data: {
             title: dto.title,
             content: dto.content,
-            hrEmail: dto.hrEmail ? dto.hrEmail : null, // Hòm thư chiến dịch (Lấy từ Frontend gửi lên)
-            creatorId: creatorId, // Gắn ID của HR tạo job (Lấy từ Token)
+            companyId,
+            emailAccountId: emailAccount?.id ?? null,
+            jobReference: dto.jobReference,
+            creatorId,
           },
         });
 
-        // 1.2. Tạo bài Test kèm theo
-        const scenario = await tx.testScenario.create({
-          data: {
-            jobId: job.id,
-            title: dto.scenarioTitle,
-            difficulty: dto.difficulty,
-            timeLimit: dto.timeLimit,
-            context: dto.scenarioContext,
-            initialCode: {}, // Rỗng lúc đầu, khởi tạo sẵn cho WebContainers
-          },
+        const scenarios: TestScenario[] = [];
+
+        for (const scenarioInput of scenarioInputs) {
+          const initialCode = await this.resolveInitialCode(
+            tx,
+            scenarioInput,
+            companyId,
+          );
+
+          scenarios.push(
+            await tx.testScenario.create({
+              data: {
+                jobId: job.id,
+                title: scenarioInput.title,
+                difficulty: scenarioInput.difficulty,
+                timeLimit: scenarioInput.timeLimit,
+                context: scenarioInput.context,
+                templateId: scenarioInput.templateId,
+                initialCode,
+                isDefault: scenarioInput.isDefault,
+              },
+            }),
+          );
+        }
+
+        const defaultScenario = scenarios.find(
+          (scenario) => scenario.isDefault,
+        );
+
+        const jobWithDefault = await tx.jobDescription.update({
+          where: { id: job.id },
+          data: { defaultScenarioId: defaultScenario?.id ?? scenarios[0]?.id },
         });
 
-        // Return của hàm con (Đẩy kết quả ra biến ở ngoài)
-        return { newJob: job, newScenario: scenario };
+        return { newJob: jobWithDefault, newScenarios: scenarios };
       },
     );
 
-    // ---------------------------------------------------------
-    // BƯỚC 2: Gọi AI Gemini để nhúng Vector cho nội dung JD
-    // ---------------------------------------------------------
     try {
-      this.logger.log('Đang tạo Vector Embedding cho nội dung JD...');
+      this.logger.log('Generating vector embedding for job content...');
 
-      // Gọi hàm nhúng đã định nghĩa phía trên
-      const embeddingVector = await this.generateEmbedding(dto.content);
-      const vectorString = `[${embeddingVector.join(',')}]`; // Ép mảng thành string cho pgvector
+      const embeddingVector = await this.generateEmbedding(
+        dto.content,
+        companyId,
+      );
+      const vectorString = `[${embeddingVector.join(',')}]`;
 
-      // Dùng Raw SQL để cập nhật cột Unsupported("vector")
       await this.prisma.$executeRawUnsafe(`
-        UPDATE "JobDescription" 
-        SET "embedding" = '${vectorString}'::vector 
+        UPDATE "JobDescription"
+        SET "embedding" = '${vectorString}'::vector
         WHERE id = '${newJob.id}'
       `);
 
-      this.logger.log('Tạo Job và lưu Vector bằng AI thành công!');
+      this.logger.log('Job created and vector stored successfully.');
     } catch (error) {
-      // Dùng Try-Catch ở đây để lỡ Gemini hết hạn mức (Quota) hoặc API Key lỗi,
-      // Hệ thống chỉ báo lỗi Log chứ KHÔNG làm sập API (vì DB đã lưu ở Bước 1 rồi)
-      this.logger.error(
-        'Cảnh báo: Lỗi khi gọi API Gemini nhúng Vector:',
-        error,
-      );
+      this.logger.error('Warning: failed to generate Gemini embedding:', error);
     }
 
-    // ---------------------------------------------------------
-    // BƯỚC 3: Trả dữ liệu về cho Controller
-    // ---------------------------------------------------------
-    return { job: newJob, scenario: newScenario };
+    return { job: newJob, scenarios: newScenarios };
   }
 
-  // Cập nhật Job
-  // Cập nhật Job kèm theo nhúng lại Vector và cập nhật Scenario
   async updateJob(
     id: string,
     creatorId: string,
     dto: CreateJobWithScenarioDto,
   ) {
-    // 1. Kiểm tra quyền sở hữu và lấy thông tin Job kèm Scenario hiện tại
     const job = await this.prisma.jobDescription.findFirst({
       where: { id, creatorId },
-      include: { scenarios: true }, // Lấy luôn bài test đang gắn với Job này
+      include: {
+        scenarios: {
+          include: { _count: { select: { testSessions: true } } },
+        },
+      },
     });
 
-    if (!job) throw new Error('Không tìm thấy Job hoặc bạn không có quyền sửa');
+    if (!job) {
+      throw new Error('Job not found or you do not have permission to edit it');
+    }
 
-    // 2. Cập nhật dữ liệu vào DB (Dùng Transaction để an toàn)
+    const emailAccount = await this.resolveEmailAccount(
+      dto,
+      creatorId,
+      job.companyId,
+    );
+
     const updatedJob = await this.prisma.$transaction(async (tx) => {
-      // 2.1 Cập nhật thông tin Job
       const updatedJD = await tx.jobDescription.update({
         where: { id },
         data: {
           title: dto.title,
           content: dto.content,
-          hrEmail: dto.hrEmail ? dto.hrEmail : null,
+          emailAccountId: emailAccount?.id ?? null,
+          jobReference: dto.jobReference,
         },
       });
 
-      // 2.2 Cập nhật thông tin bài Test (Nếu job này đã có bài test)
-      if (job.scenarios && job.scenarios.length > 0) {
-        await tx.testScenario.update({
-          where: { id: job.scenarios[0].id },
-          data: {
-            title: dto.scenarioTitle,
-            difficulty: dto.difficulty,
-            timeLimit: dto.timeLimit,
-            context: dto.scenarioContext,
-          },
-        });
+      const scenarioInputs = this.getScenarioInputs(dto);
+      const existingScenarioIds = new Set(
+        job.scenarios.map((scenario) => scenario.id),
+      );
+      const incomingIds = new Set(
+        scenarioInputs
+          .map((scenario) => scenario.id)
+          .filter((scenarioId): scenarioId is string => Boolean(scenarioId)),
+      );
+
+      for (const existingScenario of job.scenarios) {
+        if (
+          !incomingIds.has(existingScenario.id) &&
+          existingScenario._count.testSessions === 0
+        ) {
+          await tx.testScenario.delete({ where: { id: existingScenario.id } });
+        }
       }
+
+      const savedScenarios: TestScenario[] = [];
+
+      for (const scenarioInput of scenarioInputs) {
+        const initialCode = await this.resolveInitialCode(
+          tx,
+          scenarioInput,
+          job.companyId,
+        );
+
+        if (scenarioInput.id) {
+          if (!existingScenarioIds.has(scenarioInput.id)) {
+            throw new UnprocessableEntityException(
+              'Scenario does not belong to this job',
+            );
+          }
+
+          savedScenarios.push(
+            await tx.testScenario.update({
+              where: { id: scenarioInput.id },
+              data: {
+                title: scenarioInput.title,
+                difficulty: scenarioInput.difficulty,
+                timeLimit: scenarioInput.timeLimit,
+                context: scenarioInput.context,
+                templateId: scenarioInput.templateId,
+                initialCode,
+                isDefault: scenarioInput.isDefault,
+              },
+            }),
+          );
+        } else {
+          savedScenarios.push(
+            await tx.testScenario.create({
+              data: {
+                jobId: id,
+                title: scenarioInput.title,
+                difficulty: scenarioInput.difficulty,
+                timeLimit: scenarioInput.timeLimit,
+                context: scenarioInput.context,
+                templateId: scenarioInput.templateId,
+                initialCode,
+                isDefault: scenarioInput.isDefault,
+              },
+            }),
+          );
+        }
+      }
+
+      const defaultScenario = savedScenarios.find(
+        (scenario) => scenario.isDefault,
+      );
+
+      await tx.jobDescription.update({
+        where: { id },
+        data: {
+          defaultScenarioId:
+            defaultScenario?.id ?? savedScenarios[0]?.id ?? null,
+        },
+      });
 
       return updatedJD;
     });
 
-    // 3. Gọi AI nhúng lại Vector cho JD mới
     try {
-      this.logger.log(
-        `Đang cập nhật lại Vector Embedding cho Job ID: ${id}...`,
-      );
+      this.logger.log(`Regenerating vector embedding for job ID: ${id}...`);
 
-      const embeddingVector = await this.generateEmbedding(dto.content);
+      const embeddingVector = await this.generateEmbedding(
+        dto.content,
+        job.companyId,
+      );
       const vectorString = `[${embeddingVector.join(',')}]`;
 
-      // Cập nhật đè Vector mới vào Database
       await this.prisma.$executeRawUnsafe(`
-        UPDATE "JobDescription" 
-        SET "embedding" = '${vectorString}'::vector 
+        UPDATE "JobDescription"
+        SET "embedding" = '${vectorString}'::vector
         WHERE id = '${id}'
       `);
 
-      this.logger.log('Cập nhật Vector bằng AI thành công!');
+      this.logger.log('Job vector updated successfully.');
     } catch (error) {
-      // Bắt lỗi an toàn, lỡ AI lỗi thì DB vẫn cập nhật text thành công
-      this.logger.error(
-        'Cảnh báo: Lỗi khi gọi API Gemini nhúng Vector (Update):',
-        error,
-      );
+      this.logger.error('Warning: failed to update Gemini embedding:', error);
     }
 
-    return { message: 'Cập nhật chiến dịch thành công', job: updatedJob };
+    return { message: 'Campaign updated successfully', job: updatedJob };
   }
 
-  // Xóa Job
   async deleteJob(id: string, creatorId: string) {
-    // Chỉ người tạo mới được xóa
     const job = await this.prisma.jobDescription.findFirst({
       where: { id, creatorId },
     });
 
-    if (!job) throw new Error('Không tìm thấy Job hoặc bạn không có quyền xóa');
+    if (!job) {
+      throw new Error(
+        'Job not found or you do not have permission to delete it',
+      );
+    }
 
     return this.prisma.jobDescription.delete({
       where: { id },

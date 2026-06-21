@@ -6,6 +6,8 @@ import { AuthenticationGuard } from './guards/authentication.guard';
 import { RolesGuard } from './guards/role.guard';
 import { AccessTokenGuard } from './guards/jwt.guard';
 import { EmailService } from './services/mail.service';
+import { CryptoService } from './services/crypto.service';
+import { TenantGuard } from './guards/tenant.guard';
 
 @Module({
   imports: [JwtModule.register({})],
@@ -16,6 +18,8 @@ import { EmailService } from './services/mail.service';
     RolesGuard,
     AccessTokenGuard,
     EmailService,
+    CryptoService,
+    TenantGuard,
   ],
   exports: [
     PrismaService,
@@ -24,6 +28,8 @@ import { EmailService } from './services/mail.service';
     RolesGuard,
     AccessTokenGuard,
     EmailService,
+    CryptoService,
+    TenantGuard,
   ],
 })
 export class SharedModule {}

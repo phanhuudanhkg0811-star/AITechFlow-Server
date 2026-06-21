@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
+ * Model Company
+ * 
+ */
+export type Company = Prisma.CompanyModel
+/**
  * Model User
  * 
  */
@@ -28,10 +33,25 @@ export type User = Prisma.UserModel
  */
 export type Session = Prisma.SessionModel
 /**
+ * Model EmailAccount
+ * 
+ */
+export type EmailAccount = Prisma.EmailAccountModel
+/**
+ * Model Template
+ * 
+ */
+export type Template = Prisma.TemplateModel
+/**
  * Model JobDescription
  * 
  */
 export type JobDescription = Prisma.JobDescriptionModel
+/**
+ * Model TestScenario
+ * 
+ */
+export type TestScenario = Prisma.TestScenarioModel
 /**
  * Model Application
  * 
@@ -52,11 +72,6 @@ export type IdeEvent = Prisma.IdeEventModel
  * 
  */
 export type AssessmentReport = Prisma.AssessmentReportModel
-/**
- * Model TestScenario
- * 
- */
-export type TestScenario = Prisma.TestScenarioModel
 /**
  * Model Conversation
  * 

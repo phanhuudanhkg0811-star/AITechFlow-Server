@@ -24,7 +24,7 @@ export class TestsController {
 
   @Patch(':id/rename')
   @UseGuards(RolesGuard)
-  @Roles('HR', 'TECH_LEAD') // Chỉ HR/Tech Lead mới được đổi tên đề thi
+  @Roles('HR', 'COMPANY_ROOT', 'ADMIN')
   async renameTest(
     @Param('id') sessionId: string,
     @Body('title') newTitle: string,

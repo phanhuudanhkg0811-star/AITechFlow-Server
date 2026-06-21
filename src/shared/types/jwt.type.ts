@@ -1,4 +1,4 @@
-type Role = 'CANDIDATE' | 'HR' | 'TECH_LEAD';
+type Role = 'ADMIN' | 'COMPANY_ROOT' | 'HR' | 'CANDIDATE';
 
 export interface AccessTokenPayloadCreate {
   sub: string;

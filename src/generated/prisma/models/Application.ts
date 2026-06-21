@@ -226,7 +226,7 @@ export type ApplicationWhereInput = {
   status?: Prisma.EnumAppStatusFilter<"Application"> | $Enums.AppStatus
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   job?: Prisma.XOR<Prisma.JobDescriptionScalarRelationFilter, Prisma.JobDescriptionWhereInput>
-  testSession?: Prisma.XOR<Prisma.TestSessionNullableScalarRelationFilter, Prisma.TestSessionWhereInput> | null
+  testSessions?: Prisma.TestSessionListRelationFilter
   report?: Prisma.XOR<Prisma.AssessmentReportNullableScalarRelationFilter, Prisma.AssessmentReportWhereInput> | null
 }
 
@@ -239,7 +239,7 @@ export type ApplicationOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   job?: Prisma.JobDescriptionOrderByWithRelationInput
-  testSession?: Prisma.TestSessionOrderByWithRelationInput
+  testSessions?: Prisma.TestSessionOrderByRelationAggregateInput
   report?: Prisma.AssessmentReportOrderByWithRelationInput
 }
 
@@ -255,7 +255,7 @@ export type ApplicationWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumAppStatusFilter<"Application"> | $Enums.AppStatus
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   job?: Prisma.XOR<Prisma.JobDescriptionScalarRelationFilter, Prisma.JobDescriptionWhereInput>
-  testSession?: Prisma.XOR<Prisma.TestSessionNullableScalarRelationFilter, Prisma.TestSessionWhereInput> | null
+  testSessions?: Prisma.TestSessionListRelationFilter
   report?: Prisma.XOR<Prisma.AssessmentReportNullableScalarRelationFilter, Prisma.AssessmentReportWhereInput> | null
 }, "id">
 
@@ -292,7 +292,7 @@ export type ApplicationCreateInput = {
   status?: $Enums.AppStatus
   user: Prisma.UserCreateNestedOneWithoutApplicationsInput
   job: Prisma.JobDescriptionCreateNestedOneWithoutApplicationsInput
-  testSession?: Prisma.TestSessionCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportCreateNestedOneWithoutApplicationInput
 }
 
@@ -303,7 +303,7 @@ export type ApplicationUncheckedCreateInput = {
   cvText: string
   matchScore?: number | null
   status?: $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportUncheckedCreateNestedOneWithoutApplicationInput
 }
 
@@ -314,7 +314,7 @@ export type ApplicationUpdateInput = {
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
   user?: Prisma.UserUpdateOneRequiredWithoutApplicationsNestedInput
   job?: Prisma.JobDescriptionUpdateOneRequiredWithoutApplicationsNestedInput
-  testSession?: Prisma.TestSessionUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUpdateOneWithoutApplicationNestedInput
 }
 
@@ -325,7 +325,7 @@ export type ApplicationUncheckedUpdateInput = {
   cvText?: Prisma.StringFieldUpdateOperationsInput | string
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUncheckedUpdateOneWithoutApplicationNestedInput
 }
 
@@ -500,18 +500,18 @@ export type EnumAppStatusFieldUpdateOperationsInput = {
   set?: $Enums.AppStatus
 }
 
-export type ApplicationCreateNestedOneWithoutTestSessionInput = {
-  create?: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionInput>
-  connectOrCreate?: Prisma.ApplicationCreateOrConnectWithoutTestSessionInput
+export type ApplicationCreateNestedOneWithoutTestSessionsInput = {
+  create?: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionsInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionsInput>
+  connectOrCreate?: Prisma.ApplicationCreateOrConnectWithoutTestSessionsInput
   connect?: Prisma.ApplicationWhereUniqueInput
 }
 
-export type ApplicationUpdateOneRequiredWithoutTestSessionNestedInput = {
-  create?: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionInput>
-  connectOrCreate?: Prisma.ApplicationCreateOrConnectWithoutTestSessionInput
-  upsert?: Prisma.ApplicationUpsertWithoutTestSessionInput
+export type ApplicationUpdateOneRequiredWithoutTestSessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionsInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionsInput>
+  connectOrCreate?: Prisma.ApplicationCreateOrConnectWithoutTestSessionsInput
+  upsert?: Prisma.ApplicationUpsertWithoutTestSessionsInput
   connect?: Prisma.ApplicationWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ApplicationUpdateToOneWithWhereWithoutTestSessionInput, Prisma.ApplicationUpdateWithoutTestSessionInput>, Prisma.ApplicationUncheckedUpdateWithoutTestSessionInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ApplicationUpdateToOneWithWhereWithoutTestSessionsInput, Prisma.ApplicationUpdateWithoutTestSessionsInput>, Prisma.ApplicationUncheckedUpdateWithoutTestSessionsInput>
 }
 
 export type ApplicationCreateNestedOneWithoutReportInput = {
@@ -534,7 +534,7 @@ export type ApplicationCreateWithoutUserInput = {
   matchScore?: number | null
   status?: $Enums.AppStatus
   job: Prisma.JobDescriptionCreateNestedOneWithoutApplicationsInput
-  testSession?: Prisma.TestSessionCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportCreateNestedOneWithoutApplicationInput
 }
 
@@ -544,7 +544,7 @@ export type ApplicationUncheckedCreateWithoutUserInput = {
   cvText: string
   matchScore?: number | null
   status?: $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportUncheckedCreateNestedOneWithoutApplicationInput
 }
 
@@ -592,7 +592,7 @@ export type ApplicationCreateWithoutJobInput = {
   matchScore?: number | null
   status?: $Enums.AppStatus
   user: Prisma.UserCreateNestedOneWithoutApplicationsInput
-  testSession?: Prisma.TestSessionCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportCreateNestedOneWithoutApplicationInput
 }
 
@@ -602,7 +602,7 @@ export type ApplicationUncheckedCreateWithoutJobInput = {
   cvText: string
   matchScore?: number | null
   status?: $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutApplicationInput
   report?: Prisma.AssessmentReportUncheckedCreateNestedOneWithoutApplicationInput
 }
 
@@ -632,7 +632,7 @@ export type ApplicationUpdateManyWithWhereWithoutJobInput = {
   data: Prisma.XOR<Prisma.ApplicationUpdateManyMutationInput, Prisma.ApplicationUncheckedUpdateManyWithoutJobInput>
 }
 
-export type ApplicationCreateWithoutTestSessionInput = {
+export type ApplicationCreateWithoutTestSessionsInput = {
   id?: string
   cvText: string
   matchScore?: number | null
@@ -642,7 +642,7 @@ export type ApplicationCreateWithoutTestSessionInput = {
   report?: Prisma.AssessmentReportCreateNestedOneWithoutApplicationInput
 }
 
-export type ApplicationUncheckedCreateWithoutTestSessionInput = {
+export type ApplicationUncheckedCreateWithoutTestSessionsInput = {
   id?: string
   userId: string
   jobId: string
@@ -652,23 +652,23 @@ export type ApplicationUncheckedCreateWithoutTestSessionInput = {
   report?: Prisma.AssessmentReportUncheckedCreateNestedOneWithoutApplicationInput
 }
 
-export type ApplicationCreateOrConnectWithoutTestSessionInput = {
+export type ApplicationCreateOrConnectWithoutTestSessionsInput = {
   where: Prisma.ApplicationWhereUniqueInput
-  create: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionInput>
+  create: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionsInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionsInput>
 }
 
-export type ApplicationUpsertWithoutTestSessionInput = {
-  update: Prisma.XOR<Prisma.ApplicationUpdateWithoutTestSessionInput, Prisma.ApplicationUncheckedUpdateWithoutTestSessionInput>
-  create: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionInput>
+export type ApplicationUpsertWithoutTestSessionsInput = {
+  update: Prisma.XOR<Prisma.ApplicationUpdateWithoutTestSessionsInput, Prisma.ApplicationUncheckedUpdateWithoutTestSessionsInput>
+  create: Prisma.XOR<Prisma.ApplicationCreateWithoutTestSessionsInput, Prisma.ApplicationUncheckedCreateWithoutTestSessionsInput>
   where?: Prisma.ApplicationWhereInput
 }
 
-export type ApplicationUpdateToOneWithWhereWithoutTestSessionInput = {
+export type ApplicationUpdateToOneWithWhereWithoutTestSessionsInput = {
   where?: Prisma.ApplicationWhereInput
-  data: Prisma.XOR<Prisma.ApplicationUpdateWithoutTestSessionInput, Prisma.ApplicationUncheckedUpdateWithoutTestSessionInput>
+  data: Prisma.XOR<Prisma.ApplicationUpdateWithoutTestSessionsInput, Prisma.ApplicationUncheckedUpdateWithoutTestSessionsInput>
 }
 
-export type ApplicationUpdateWithoutTestSessionInput = {
+export type ApplicationUpdateWithoutTestSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   cvText?: Prisma.StringFieldUpdateOperationsInput | string
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -678,7 +678,7 @@ export type ApplicationUpdateWithoutTestSessionInput = {
   report?: Prisma.AssessmentReportUpdateOneWithoutApplicationNestedInput
 }
 
-export type ApplicationUncheckedUpdateWithoutTestSessionInput = {
+export type ApplicationUncheckedUpdateWithoutTestSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   jobId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -695,7 +695,7 @@ export type ApplicationCreateWithoutReportInput = {
   status?: $Enums.AppStatus
   user: Prisma.UserCreateNestedOneWithoutApplicationsInput
   job: Prisma.JobDescriptionCreateNestedOneWithoutApplicationsInput
-  testSession?: Prisma.TestSessionCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutApplicationInput
 }
 
 export type ApplicationUncheckedCreateWithoutReportInput = {
@@ -705,7 +705,7 @@ export type ApplicationUncheckedCreateWithoutReportInput = {
   cvText: string
   matchScore?: number | null
   status?: $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedCreateNestedOneWithoutApplicationInput
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutApplicationInput
 }
 
 export type ApplicationCreateOrConnectWithoutReportInput = {
@@ -731,7 +731,7 @@ export type ApplicationUpdateWithoutReportInput = {
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
   user?: Prisma.UserUpdateOneRequiredWithoutApplicationsNestedInput
   job?: Prisma.JobDescriptionUpdateOneRequiredWithoutApplicationsNestedInput
-  testSession?: Prisma.TestSessionUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutApplicationNestedInput
 }
 
 export type ApplicationUncheckedUpdateWithoutReportInput = {
@@ -741,7 +741,7 @@ export type ApplicationUncheckedUpdateWithoutReportInput = {
   cvText?: Prisma.StringFieldUpdateOperationsInput | string
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutApplicationNestedInput
 }
 
 export type ApplicationCreateManyUserInput = {
@@ -758,7 +758,7 @@ export type ApplicationUpdateWithoutUserInput = {
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
   job?: Prisma.JobDescriptionUpdateOneRequiredWithoutApplicationsNestedInput
-  testSession?: Prisma.TestSessionUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUpdateOneWithoutApplicationNestedInput
 }
 
@@ -768,7 +768,7 @@ export type ApplicationUncheckedUpdateWithoutUserInput = {
   cvText?: Prisma.StringFieldUpdateOperationsInput | string
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUncheckedUpdateOneWithoutApplicationNestedInput
 }
 
@@ -794,7 +794,7 @@ export type ApplicationUpdateWithoutJobInput = {
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
   user?: Prisma.UserUpdateOneRequiredWithoutApplicationsNestedInput
-  testSession?: Prisma.TestSessionUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUpdateOneWithoutApplicationNestedInput
 }
 
@@ -804,7 +804,7 @@ export type ApplicationUncheckedUpdateWithoutJobInput = {
   cvText?: Prisma.StringFieldUpdateOperationsInput | string
   matchScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   status?: Prisma.EnumAppStatusFieldUpdateOperationsInput | $Enums.AppStatus
-  testSession?: Prisma.TestSessionUncheckedUpdateOneWithoutApplicationNestedInput
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutApplicationNestedInput
   report?: Prisma.AssessmentReportUncheckedUpdateOneWithoutApplicationNestedInput
 }
 
@@ -817,6 +817,35 @@ export type ApplicationUncheckedUpdateManyWithoutJobInput = {
 }
 
 
+/**
+ * Count Type ApplicationCountOutputType
+ */
+
+export type ApplicationCountOutputType = {
+  testSessions: number
+}
+
+export type ApplicationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  testSessions?: boolean | ApplicationCountOutputTypeCountTestSessionsArgs
+}
+
+/**
+ * ApplicationCountOutputType without action
+ */
+export type ApplicationCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ApplicationCountOutputType
+   */
+  select?: Prisma.ApplicationCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * ApplicationCountOutputType without action
+ */
+export type ApplicationCountOutputTypeCountTestSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TestSessionWhereInput
+}
+
 
 export type ApplicationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -827,8 +856,9 @@ export type ApplicationSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   status?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
-  testSession?: boolean | Prisma.Application$testSessionArgs<ExtArgs>
+  testSessions?: boolean | Prisma.Application$testSessionsArgs<ExtArgs>
   report?: boolean | Prisma.Application$reportArgs<ExtArgs>
+  _count?: boolean | Prisma.ApplicationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["application"]>
 
 export type ApplicationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -866,8 +896,9 @@ export type ApplicationOmit<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type ApplicationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
-  testSession?: boolean | Prisma.Application$testSessionArgs<ExtArgs>
+  testSessions?: boolean | Prisma.Application$testSessionsArgs<ExtArgs>
   report?: boolean | Prisma.Application$reportArgs<ExtArgs>
+  _count?: boolean | Prisma.ApplicationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ApplicationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -883,7 +914,7 @@ export type $ApplicationPayload<ExtArgs extends runtime.Types.Extensions.Interna
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
     job: Prisma.$JobDescriptionPayload<ExtArgs>
-    testSession: Prisma.$TestSessionPayload<ExtArgs> | null
+    testSessions: Prisma.$TestSessionPayload<ExtArgs>[]
     report: Prisma.$AssessmentReportPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1289,7 +1320,7 @@ export interface Prisma__ApplicationClient<T, Null = never, ExtArgs extends runt
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   job<T extends Prisma.JobDescriptionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.JobDescriptionDefaultArgs<ExtArgs>>): Prisma.Prisma__JobDescriptionClient<runtime.Types.Result.GetResult<Prisma.$JobDescriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  testSession<T extends Prisma.Application$testSessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Application$testSessionArgs<ExtArgs>>): Prisma.Prisma__TestSessionClient<runtime.Types.Result.GetResult<Prisma.$TestSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  testSessions<T extends Prisma.Application$testSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Application$testSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TestSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   report<T extends Prisma.Application$reportArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Application$reportArgs<ExtArgs>>): Prisma.Prisma__AssessmentReportClient<runtime.Types.Result.GetResult<Prisma.$AssessmentReportPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1727,9 +1758,9 @@ export type ApplicationDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
 }
 
 /**
- * Application.testSession
+ * Application.testSessions
  */
-export type Application$testSessionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Application$testSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the TestSession
    */
@@ -1743,6 +1774,11 @@ export type Application$testSessionArgs<ExtArgs extends runtime.Types.Extensions
    */
   include?: Prisma.TestSessionInclude<ExtArgs> | null
   where?: Prisma.TestSessionWhereInput
+  orderBy?: Prisma.TestSessionOrderByWithRelationInput | Prisma.TestSessionOrderByWithRelationInput[]
+  cursor?: Prisma.TestSessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TestSessionScalarFieldEnum | Prisma.TestSessionScalarFieldEnum[]
 }
 
 /**

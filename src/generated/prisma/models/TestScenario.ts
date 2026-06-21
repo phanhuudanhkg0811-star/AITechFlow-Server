@@ -41,7 +41,10 @@ export type TestScenarioMinAggregateOutputType = {
   difficulty: string | null
   timeLimit: number | null
   context: string | null
+  templateId: string | null
+  isDefault: boolean | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type TestScenarioMaxAggregateOutputType = {
@@ -51,7 +54,10 @@ export type TestScenarioMaxAggregateOutputType = {
   difficulty: string | null
   timeLimit: number | null
   context: string | null
+  templateId: string | null
+  isDefault: boolean | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type TestScenarioCountAggregateOutputType = {
@@ -62,7 +68,10 @@ export type TestScenarioCountAggregateOutputType = {
   timeLimit: number
   context: number
   initialCode: number
+  templateId: number
+  isDefault: number
   createdAt: number
+  updatedAt: number
   _all: number
 }
 
@@ -82,7 +91,10 @@ export type TestScenarioMinAggregateInputType = {
   difficulty?: true
   timeLimit?: true
   context?: true
+  templateId?: true
+  isDefault?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type TestScenarioMaxAggregateInputType = {
@@ -92,7 +104,10 @@ export type TestScenarioMaxAggregateInputType = {
   difficulty?: true
   timeLimit?: true
   context?: true
+  templateId?: true
+  isDefault?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type TestScenarioCountAggregateInputType = {
@@ -103,7 +118,10 @@ export type TestScenarioCountAggregateInputType = {
   timeLimit?: true
   context?: true
   initialCode?: true
+  templateId?: true
+  isDefault?: true
   createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -201,7 +219,10 @@ export type TestScenarioGroupByOutputType = {
   timeLimit: number
   context: string
   initialCode: runtime.JsonValue
+  templateId: string | null
+  isDefault: boolean
   createdAt: Date
+  updatedAt: Date
   _count: TestScenarioCountAggregateOutputType | null
   _avg: TestScenarioAvgAggregateOutputType | null
   _sum: TestScenarioSumAggregateOutputType | null
@@ -235,8 +256,13 @@ export type TestScenarioWhereInput = {
   timeLimit?: Prisma.IntFilter<"TestScenario"> | number
   context?: Prisma.StringFilter<"TestScenario"> | string
   initialCode?: Prisma.JsonFilter<"TestScenario">
+  templateId?: Prisma.StringNullableFilter<"TestScenario"> | string | null
+  isDefault?: Prisma.BoolFilter<"TestScenario"> | boolean
   createdAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
   job?: Prisma.XOR<Prisma.JobDescriptionScalarRelationFilter, Prisma.JobDescriptionWhereInput>
+  template?: Prisma.XOR<Prisma.TemplateNullableScalarRelationFilter, Prisma.TemplateWhereInput> | null
+  defaultForJob?: Prisma.XOR<Prisma.JobDescriptionNullableScalarRelationFilter, Prisma.JobDescriptionWhereInput> | null
   testSessions?: Prisma.TestSessionListRelationFilter
 }
 
@@ -248,8 +274,13 @@ export type TestScenarioOrderByWithRelationInput = {
   timeLimit?: Prisma.SortOrder
   context?: Prisma.SortOrder
   initialCode?: Prisma.SortOrder
+  templateId?: Prisma.SortOrderInput | Prisma.SortOrder
+  isDefault?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   job?: Prisma.JobDescriptionOrderByWithRelationInput
+  template?: Prisma.TemplateOrderByWithRelationInput
+  defaultForJob?: Prisma.JobDescriptionOrderByWithRelationInput
   testSessions?: Prisma.TestSessionOrderByRelationAggregateInput
 }
 
@@ -264,8 +295,13 @@ export type TestScenarioWhereUniqueInput = Prisma.AtLeast<{
   timeLimit?: Prisma.IntFilter<"TestScenario"> | number
   context?: Prisma.StringFilter<"TestScenario"> | string
   initialCode?: Prisma.JsonFilter<"TestScenario">
+  templateId?: Prisma.StringNullableFilter<"TestScenario"> | string | null
+  isDefault?: Prisma.BoolFilter<"TestScenario"> | boolean
   createdAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
   job?: Prisma.XOR<Prisma.JobDescriptionScalarRelationFilter, Prisma.JobDescriptionWhereInput>
+  template?: Prisma.XOR<Prisma.TemplateNullableScalarRelationFilter, Prisma.TemplateWhereInput> | null
+  defaultForJob?: Prisma.XOR<Prisma.JobDescriptionNullableScalarRelationFilter, Prisma.JobDescriptionWhereInput> | null
   testSessions?: Prisma.TestSessionListRelationFilter
 }, "id">
 
@@ -277,7 +313,10 @@ export type TestScenarioOrderByWithAggregationInput = {
   timeLimit?: Prisma.SortOrder
   context?: Prisma.SortOrder
   initialCode?: Prisma.SortOrder
+  templateId?: Prisma.SortOrderInput | Prisma.SortOrder
+  isDefault?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.TestScenarioCountOrderByAggregateInput
   _avg?: Prisma.TestScenarioAvgOrderByAggregateInput
   _max?: Prisma.TestScenarioMaxOrderByAggregateInput
@@ -296,7 +335,10 @@ export type TestScenarioScalarWhereWithAggregatesInput = {
   timeLimit?: Prisma.IntWithAggregatesFilter<"TestScenario"> | number
   context?: Prisma.StringWithAggregatesFilter<"TestScenario"> | string
   initialCode?: Prisma.JsonWithAggregatesFilter<"TestScenario">
+  templateId?: Prisma.StringNullableWithAggregatesFilter<"TestScenario"> | string | null
+  isDefault?: Prisma.BoolWithAggregatesFilter<"TestScenario"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"TestScenario"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"TestScenario"> | Date | string
 }
 
 export type TestScenarioCreateInput = {
@@ -306,8 +348,12 @@ export type TestScenarioCreateInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
   job: Prisma.JobDescriptionCreateNestedOneWithoutScenariosInput
+  template?: Prisma.TemplateCreateNestedOneWithoutScenariosInput
+  defaultForJob?: Prisma.JobDescriptionCreateNestedOneWithoutDefaultScenarioInput
   testSessions?: Prisma.TestSessionCreateNestedManyWithoutScenarioInput
 }
 
@@ -319,7 +365,11 @@ export type TestScenarioUncheckedCreateInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedCreateNestedOneWithoutDefaultScenarioInput
   testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutScenarioInput
 }
 
@@ -330,8 +380,12 @@ export type TestScenarioUpdateInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   job?: Prisma.JobDescriptionUpdateOneRequiredWithoutScenariosNestedInput
+  template?: Prisma.TemplateUpdateOneWithoutScenariosNestedInput
+  defaultForJob?: Prisma.JobDescriptionUpdateOneWithoutDefaultScenarioNestedInput
   testSessions?: Prisma.TestSessionUpdateManyWithoutScenarioNestedInput
 }
 
@@ -343,7 +397,11 @@ export type TestScenarioUncheckedUpdateInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedUpdateOneWithoutDefaultScenarioNestedInput
   testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutScenarioNestedInput
 }
 
@@ -355,7 +413,10 @@ export type TestScenarioCreateManyInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type TestScenarioUpdateManyMutationInput = {
@@ -365,7 +426,9 @@ export type TestScenarioUpdateManyMutationInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type TestScenarioUncheckedUpdateManyInput = {
@@ -376,7 +439,10 @@ export type TestScenarioUncheckedUpdateManyInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type TestScenarioListRelationFilter = {
@@ -389,9 +455,9 @@ export type TestScenarioOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type TestScenarioScalarRelationFilter = {
-  is?: Prisma.TestScenarioWhereInput
-  isNot?: Prisma.TestScenarioWhereInput
+export type TestScenarioNullableScalarRelationFilter = {
+  is?: Prisma.TestScenarioWhereInput | null
+  isNot?: Prisma.TestScenarioWhereInput | null
 }
 
 export type TestScenarioCountOrderByAggregateInput = {
@@ -402,7 +468,10 @@ export type TestScenarioCountOrderByAggregateInput = {
   timeLimit?: Prisma.SortOrder
   context?: Prisma.SortOrder
   initialCode?: Prisma.SortOrder
+  templateId?: Prisma.SortOrder
+  isDefault?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type TestScenarioAvgOrderByAggregateInput = {
@@ -416,7 +485,10 @@ export type TestScenarioMaxOrderByAggregateInput = {
   difficulty?: Prisma.SortOrder
   timeLimit?: Prisma.SortOrder
   context?: Prisma.SortOrder
+  templateId?: Prisma.SortOrder
+  isDefault?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type TestScenarioMinOrderByAggregateInput = {
@@ -426,11 +498,67 @@ export type TestScenarioMinOrderByAggregateInput = {
   difficulty?: Prisma.SortOrder
   timeLimit?: Prisma.SortOrder
   context?: Prisma.SortOrder
+  templateId?: Prisma.SortOrder
+  isDefault?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type TestScenarioSumOrderByAggregateInput = {
   timeLimit?: Prisma.SortOrder
+}
+
+export type TestScenarioScalarRelationFilter = {
+  is?: Prisma.TestScenarioWhereInput
+  isNot?: Prisma.TestScenarioWhereInput
+}
+
+export type TestScenarioCreateNestedManyWithoutTemplateInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput> | Prisma.TestScenarioCreateWithoutTemplateInput[] | Prisma.TestScenarioUncheckedCreateWithoutTemplateInput[]
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutTemplateInput | Prisma.TestScenarioCreateOrConnectWithoutTemplateInput[]
+  createMany?: Prisma.TestScenarioCreateManyTemplateInputEnvelope
+  connect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+}
+
+export type TestScenarioUncheckedCreateNestedManyWithoutTemplateInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput> | Prisma.TestScenarioCreateWithoutTemplateInput[] | Prisma.TestScenarioUncheckedCreateWithoutTemplateInput[]
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutTemplateInput | Prisma.TestScenarioCreateOrConnectWithoutTemplateInput[]
+  createMany?: Prisma.TestScenarioCreateManyTemplateInputEnvelope
+  connect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+}
+
+export type TestScenarioUpdateManyWithoutTemplateNestedInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput> | Prisma.TestScenarioCreateWithoutTemplateInput[] | Prisma.TestScenarioUncheckedCreateWithoutTemplateInput[]
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutTemplateInput | Prisma.TestScenarioCreateOrConnectWithoutTemplateInput[]
+  upsert?: Prisma.TestScenarioUpsertWithWhereUniqueWithoutTemplateInput | Prisma.TestScenarioUpsertWithWhereUniqueWithoutTemplateInput[]
+  createMany?: Prisma.TestScenarioCreateManyTemplateInputEnvelope
+  set?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  disconnect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  delete?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  connect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  update?: Prisma.TestScenarioUpdateWithWhereUniqueWithoutTemplateInput | Prisma.TestScenarioUpdateWithWhereUniqueWithoutTemplateInput[]
+  updateMany?: Prisma.TestScenarioUpdateManyWithWhereWithoutTemplateInput | Prisma.TestScenarioUpdateManyWithWhereWithoutTemplateInput[]
+  deleteMany?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
+}
+
+export type TestScenarioUncheckedUpdateManyWithoutTemplateNestedInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput> | Prisma.TestScenarioCreateWithoutTemplateInput[] | Prisma.TestScenarioUncheckedCreateWithoutTemplateInput[]
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutTemplateInput | Prisma.TestScenarioCreateOrConnectWithoutTemplateInput[]
+  upsert?: Prisma.TestScenarioUpsertWithWhereUniqueWithoutTemplateInput | Prisma.TestScenarioUpsertWithWhereUniqueWithoutTemplateInput[]
+  createMany?: Prisma.TestScenarioCreateManyTemplateInputEnvelope
+  set?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  disconnect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  delete?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  connect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+  update?: Prisma.TestScenarioUpdateWithWhereUniqueWithoutTemplateInput | Prisma.TestScenarioUpdateWithWhereUniqueWithoutTemplateInput[]
+  updateMany?: Prisma.TestScenarioUpdateManyWithWhereWithoutTemplateInput | Prisma.TestScenarioUpdateManyWithWhereWithoutTemplateInput[]
+  deleteMany?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
+}
+
+export type TestScenarioCreateNestedOneWithoutDefaultForJobInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedCreateWithoutDefaultForJobInput>
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutDefaultForJobInput
+  connect?: Prisma.TestScenarioWhereUniqueInput
 }
 
 export type TestScenarioCreateNestedManyWithoutJobInput = {
@@ -445,6 +573,16 @@ export type TestScenarioUncheckedCreateNestedManyWithoutJobInput = {
   connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutJobInput | Prisma.TestScenarioCreateOrConnectWithoutJobInput[]
   createMany?: Prisma.TestScenarioCreateManyJobInputEnvelope
   connect?: Prisma.TestScenarioWhereUniqueInput | Prisma.TestScenarioWhereUniqueInput[]
+}
+
+export type TestScenarioUpdateOneWithoutDefaultForJobNestedInput = {
+  create?: Prisma.XOR<Prisma.TestScenarioCreateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedCreateWithoutDefaultForJobInput>
+  connectOrCreate?: Prisma.TestScenarioCreateOrConnectWithoutDefaultForJobInput
+  upsert?: Prisma.TestScenarioUpsertWithoutDefaultForJobInput
+  disconnect?: Prisma.TestScenarioWhereInput | boolean
+  delete?: Prisma.TestScenarioWhereInput | boolean
+  connect?: Prisma.TestScenarioWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TestScenarioUpdateToOneWithWhereWithoutDefaultForJobInput, Prisma.TestScenarioUpdateWithoutDefaultForJobInput>, Prisma.TestScenarioUncheckedUpdateWithoutDefaultForJobInput>
 }
 
 export type TestScenarioUpdateManyWithoutJobNestedInput = {
@@ -489,12 +627,112 @@ export type TestScenarioUpdateOneRequiredWithoutTestSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TestScenarioUpdateToOneWithWhereWithoutTestSessionsInput, Prisma.TestScenarioUpdateWithoutTestSessionsInput>, Prisma.TestScenarioUncheckedUpdateWithoutTestSessionsInput>
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type TestScenarioCreateWithoutTemplateInput = {
+  id?: string
+  title: string
+  difficulty: string
+  timeLimit?: number
+  context: string
+  initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  job: Prisma.JobDescriptionCreateNestedOneWithoutScenariosInput
+  defaultForJob?: Prisma.JobDescriptionCreateNestedOneWithoutDefaultScenarioInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutScenarioInput
+}
+
+export type TestScenarioUncheckedCreateWithoutTemplateInput = {
+  id?: string
+  jobId: string
+  title: string
+  difficulty: string
+  timeLimit?: number
+  context: string
+  initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedCreateNestedOneWithoutDefaultScenarioInput
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutScenarioInput
+}
+
+export type TestScenarioCreateOrConnectWithoutTemplateInput = {
+  where: Prisma.TestScenarioWhereUniqueInput
+  create: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput>
+}
+
+export type TestScenarioCreateManyTemplateInputEnvelope = {
+  data: Prisma.TestScenarioCreateManyTemplateInput | Prisma.TestScenarioCreateManyTemplateInput[]
+  skipDuplicates?: boolean
+}
+
+export type TestScenarioUpsertWithWhereUniqueWithoutTemplateInput = {
+  where: Prisma.TestScenarioWhereUniqueInput
+  update: Prisma.XOR<Prisma.TestScenarioUpdateWithoutTemplateInput, Prisma.TestScenarioUncheckedUpdateWithoutTemplateInput>
+  create: Prisma.XOR<Prisma.TestScenarioCreateWithoutTemplateInput, Prisma.TestScenarioUncheckedCreateWithoutTemplateInput>
+}
+
+export type TestScenarioUpdateWithWhereUniqueWithoutTemplateInput = {
+  where: Prisma.TestScenarioWhereUniqueInput
+  data: Prisma.XOR<Prisma.TestScenarioUpdateWithoutTemplateInput, Prisma.TestScenarioUncheckedUpdateWithoutTemplateInput>
+}
+
+export type TestScenarioUpdateManyWithWhereWithoutTemplateInput = {
+  where: Prisma.TestScenarioScalarWhereInput
+  data: Prisma.XOR<Prisma.TestScenarioUpdateManyMutationInput, Prisma.TestScenarioUncheckedUpdateManyWithoutTemplateInput>
+}
+
+export type TestScenarioScalarWhereInput = {
+  AND?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
+  OR?: Prisma.TestScenarioScalarWhereInput[]
+  NOT?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
+  id?: Prisma.StringFilter<"TestScenario"> | string
+  jobId?: Prisma.StringFilter<"TestScenario"> | string
+  title?: Prisma.StringFilter<"TestScenario"> | string
+  difficulty?: Prisma.StringFilter<"TestScenario"> | string
+  timeLimit?: Prisma.IntFilter<"TestScenario"> | number
+  context?: Prisma.StringFilter<"TestScenario"> | string
+  initialCode?: Prisma.JsonFilter<"TestScenario">
+  templateId?: Prisma.StringNullableFilter<"TestScenario"> | string | null
+  isDefault?: Prisma.BoolFilter<"TestScenario"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
+}
+
+export type TestScenarioCreateWithoutDefaultForJobInput = {
+  id?: string
+  title: string
+  difficulty: string
+  timeLimit?: number
+  context: string
+  initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  job: Prisma.JobDescriptionCreateNestedOneWithoutScenariosInput
+  template?: Prisma.TemplateCreateNestedOneWithoutScenariosInput
+  testSessions?: Prisma.TestSessionCreateNestedManyWithoutScenarioInput
+}
+
+export type TestScenarioUncheckedCreateWithoutDefaultForJobInput = {
+  id?: string
+  jobId: string
+  title: string
+  difficulty: string
+  timeLimit?: number
+  context: string
+  initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutScenarioInput
+}
+
+export type TestScenarioCreateOrConnectWithoutDefaultForJobInput = {
+  where: Prisma.TestScenarioWhereUniqueInput
+  create: Prisma.XOR<Prisma.TestScenarioCreateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedCreateWithoutDefaultForJobInput>
 }
 
 export type TestScenarioCreateWithoutJobInput = {
@@ -504,7 +742,11 @@ export type TestScenarioCreateWithoutJobInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
+  template?: Prisma.TemplateCreateNestedOneWithoutScenariosInput
+  defaultForJob?: Prisma.JobDescriptionCreateNestedOneWithoutDefaultScenarioInput
   testSessions?: Prisma.TestSessionCreateNestedManyWithoutScenarioInput
 }
 
@@ -515,7 +757,11 @@ export type TestScenarioUncheckedCreateWithoutJobInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedCreateNestedOneWithoutDefaultScenarioInput
   testSessions?: Prisma.TestSessionUncheckedCreateNestedManyWithoutScenarioInput
 }
 
@@ -527,6 +773,47 @@ export type TestScenarioCreateOrConnectWithoutJobInput = {
 export type TestScenarioCreateManyJobInputEnvelope = {
   data: Prisma.TestScenarioCreateManyJobInput | Prisma.TestScenarioCreateManyJobInput[]
   skipDuplicates?: boolean
+}
+
+export type TestScenarioUpsertWithoutDefaultForJobInput = {
+  update: Prisma.XOR<Prisma.TestScenarioUpdateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedUpdateWithoutDefaultForJobInput>
+  create: Prisma.XOR<Prisma.TestScenarioCreateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedCreateWithoutDefaultForJobInput>
+  where?: Prisma.TestScenarioWhereInput
+}
+
+export type TestScenarioUpdateToOneWithWhereWithoutDefaultForJobInput = {
+  where?: Prisma.TestScenarioWhereInput
+  data: Prisma.XOR<Prisma.TestScenarioUpdateWithoutDefaultForJobInput, Prisma.TestScenarioUncheckedUpdateWithoutDefaultForJobInput>
+}
+
+export type TestScenarioUpdateWithoutDefaultForJobInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
+  context?: Prisma.StringFieldUpdateOperationsInput | string
+  initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  job?: Prisma.JobDescriptionUpdateOneRequiredWithoutScenariosNestedInput
+  template?: Prisma.TemplateUpdateOneWithoutScenariosNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutScenarioNestedInput
+}
+
+export type TestScenarioUncheckedUpdateWithoutDefaultForJobInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  jobId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
+  context?: Prisma.StringFieldUpdateOperationsInput | string
+  initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutScenarioNestedInput
 }
 
 export type TestScenarioUpsertWithWhereUniqueWithoutJobInput = {
@@ -545,20 +832,6 @@ export type TestScenarioUpdateManyWithWhereWithoutJobInput = {
   data: Prisma.XOR<Prisma.TestScenarioUpdateManyMutationInput, Prisma.TestScenarioUncheckedUpdateManyWithoutJobInput>
 }
 
-export type TestScenarioScalarWhereInput = {
-  AND?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
-  OR?: Prisma.TestScenarioScalarWhereInput[]
-  NOT?: Prisma.TestScenarioScalarWhereInput | Prisma.TestScenarioScalarWhereInput[]
-  id?: Prisma.StringFilter<"TestScenario"> | string
-  jobId?: Prisma.StringFilter<"TestScenario"> | string
-  title?: Prisma.StringFilter<"TestScenario"> | string
-  difficulty?: Prisma.StringFilter<"TestScenario"> | string
-  timeLimit?: Prisma.IntFilter<"TestScenario"> | number
-  context?: Prisma.StringFilter<"TestScenario"> | string
-  initialCode?: Prisma.JsonFilter<"TestScenario">
-  createdAt?: Prisma.DateTimeFilter<"TestScenario"> | Date | string
-}
-
 export type TestScenarioCreateWithoutTestSessionsInput = {
   id?: string
   title: string
@@ -566,8 +839,12 @@ export type TestScenarioCreateWithoutTestSessionsInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
   job: Prisma.JobDescriptionCreateNestedOneWithoutScenariosInput
+  template?: Prisma.TemplateCreateNestedOneWithoutScenariosInput
+  defaultForJob?: Prisma.JobDescriptionCreateNestedOneWithoutDefaultScenarioInput
 }
 
 export type TestScenarioUncheckedCreateWithoutTestSessionsInput = {
@@ -578,7 +855,11 @@ export type TestScenarioUncheckedCreateWithoutTestSessionsInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedCreateNestedOneWithoutDefaultScenarioInput
 }
 
 export type TestScenarioCreateOrConnectWithoutTestSessionsInput = {
@@ -604,8 +885,12 @@ export type TestScenarioUpdateWithoutTestSessionsInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   job?: Prisma.JobDescriptionUpdateOneRequiredWithoutScenariosNestedInput
+  template?: Prisma.TemplateUpdateOneWithoutScenariosNestedInput
+  defaultForJob?: Prisma.JobDescriptionUpdateOneWithoutDefaultScenarioNestedInput
 }
 
 export type TestScenarioUncheckedUpdateWithoutTestSessionsInput = {
@@ -616,7 +901,67 @@ export type TestScenarioUncheckedUpdateWithoutTestSessionsInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedUpdateOneWithoutDefaultScenarioNestedInput
+}
+
+export type TestScenarioCreateManyTemplateInput = {
+  id?: string
+  jobId: string
+  title: string
+  difficulty: string
+  timeLimit?: number
+  context: string
+  initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TestScenarioUpdateWithoutTemplateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
+  context?: Prisma.StringFieldUpdateOperationsInput | string
+  initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  job?: Prisma.JobDescriptionUpdateOneRequiredWithoutScenariosNestedInput
+  defaultForJob?: Prisma.JobDescriptionUpdateOneWithoutDefaultScenarioNestedInput
+  testSessions?: Prisma.TestSessionUpdateManyWithoutScenarioNestedInput
+}
+
+export type TestScenarioUncheckedUpdateWithoutTemplateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  jobId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
+  context?: Prisma.StringFieldUpdateOperationsInput | string
+  initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedUpdateOneWithoutDefaultScenarioNestedInput
+  testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutScenarioNestedInput
+}
+
+export type TestScenarioUncheckedUpdateManyWithoutTemplateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  jobId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
+  context?: Prisma.StringFieldUpdateOperationsInput | string
+  initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type TestScenarioCreateManyJobInput = {
@@ -626,7 +971,10 @@ export type TestScenarioCreateManyJobInput = {
   timeLimit?: number
   context: string
   initialCode: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: string | null
+  isDefault?: boolean
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type TestScenarioUpdateWithoutJobInput = {
@@ -636,7 +984,11 @@ export type TestScenarioUpdateWithoutJobInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  template?: Prisma.TemplateUpdateOneWithoutScenariosNestedInput
+  defaultForJob?: Prisma.JobDescriptionUpdateOneWithoutDefaultScenarioNestedInput
   testSessions?: Prisma.TestSessionUpdateManyWithoutScenarioNestedInput
 }
 
@@ -647,7 +999,11 @@ export type TestScenarioUncheckedUpdateWithoutJobInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  defaultForJob?: Prisma.JobDescriptionUncheckedUpdateOneWithoutDefaultScenarioNestedInput
   testSessions?: Prisma.TestSessionUncheckedUpdateManyWithoutScenarioNestedInput
 }
 
@@ -658,7 +1014,10 @@ export type TestScenarioUncheckedUpdateManyWithoutJobInput = {
   timeLimit?: Prisma.IntFieldUpdateOperationsInput | number
   context?: Prisma.StringFieldUpdateOperationsInput | string
   initialCode?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  templateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -700,8 +1059,13 @@ export type TestScenarioSelect<ExtArgs extends runtime.Types.Extensions.Internal
   timeLimit?: boolean
   context?: boolean
   initialCode?: boolean
+  templateId?: boolean
+  isDefault?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
+  defaultForJob?: boolean | Prisma.TestScenario$defaultForJobArgs<ExtArgs>
   testSessions?: boolean | Prisma.TestScenario$testSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TestScenarioCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["testScenario"]>
@@ -714,8 +1078,12 @@ export type TestScenarioSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   timeLimit?: boolean
   context?: boolean
   initialCode?: boolean
+  templateId?: boolean
+  isDefault?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
 }, ExtArgs["result"]["testScenario"]>
 
 export type TestScenarioSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -726,8 +1094,12 @@ export type TestScenarioSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   timeLimit?: boolean
   context?: boolean
   initialCode?: boolean
+  templateId?: boolean
+  isDefault?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
 }, ExtArgs["result"]["testScenario"]>
 
 export type TestScenarioSelectScalar = {
@@ -738,26 +1110,35 @@ export type TestScenarioSelectScalar = {
   timeLimit?: boolean
   context?: boolean
   initialCode?: boolean
+  templateId?: boolean
+  isDefault?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type TestScenarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "jobId" | "title" | "difficulty" | "timeLimit" | "context" | "initialCode" | "createdAt", ExtArgs["result"]["testScenario"]>
+export type TestScenarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "jobId" | "title" | "difficulty" | "timeLimit" | "context" | "initialCode" | "templateId" | "isDefault" | "createdAt" | "updatedAt", ExtArgs["result"]["testScenario"]>
 export type TestScenarioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
+  defaultForJob?: boolean | Prisma.TestScenario$defaultForJobArgs<ExtArgs>
   testSessions?: boolean | Prisma.TestScenario$testSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TestScenarioCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TestScenarioIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
 }
 export type TestScenarioIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   job?: boolean | Prisma.JobDescriptionDefaultArgs<ExtArgs>
+  template?: boolean | Prisma.TestScenario$templateArgs<ExtArgs>
 }
 
 export type $TestScenarioPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TestScenario"
   objects: {
     job: Prisma.$JobDescriptionPayload<ExtArgs>
+    template: Prisma.$TemplatePayload<ExtArgs> | null
+    defaultForJob: Prisma.$JobDescriptionPayload<ExtArgs> | null
     testSessions: Prisma.$TestSessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -768,7 +1149,10 @@ export type $TestScenarioPayload<ExtArgs extends runtime.Types.Extensions.Intern
     timeLimit: number
     context: string
     initialCode: runtime.JsonValue
+    templateId: string | null
+    isDefault: boolean
     createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["testScenario"]>
   composites: {}
 }
@@ -1164,6 +1548,8 @@ readonly fields: TestScenarioFieldRefs;
 export interface Prisma__TestScenarioClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   job<T extends Prisma.JobDescriptionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.JobDescriptionDefaultArgs<ExtArgs>>): Prisma.Prisma__JobDescriptionClient<runtime.Types.Result.GetResult<Prisma.$JobDescriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  template<T extends Prisma.TestScenario$templateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestScenario$templateArgs<ExtArgs>>): Prisma.Prisma__TemplateClient<runtime.Types.Result.GetResult<Prisma.$TemplatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  defaultForJob<T extends Prisma.TestScenario$defaultForJobArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestScenario$defaultForJobArgs<ExtArgs>>): Prisma.Prisma__JobDescriptionClient<runtime.Types.Result.GetResult<Prisma.$JobDescriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   testSessions<T extends Prisma.TestScenario$testSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TestScenario$testSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TestSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1201,7 +1587,10 @@ export interface TestScenarioFieldRefs {
   readonly timeLimit: Prisma.FieldRef<"TestScenario", 'Int'>
   readonly context: Prisma.FieldRef<"TestScenario", 'String'>
   readonly initialCode: Prisma.FieldRef<"TestScenario", 'Json'>
+  readonly templateId: Prisma.FieldRef<"TestScenario", 'String'>
+  readonly isDefault: Prisma.FieldRef<"TestScenario", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"TestScenario", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"TestScenario", 'DateTime'>
 }
     
 
@@ -1600,6 +1989,44 @@ export type TestScenarioDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many TestScenarios to delete.
    */
   limit?: number
+}
+
+/**
+ * TestScenario.template
+ */
+export type TestScenario$templateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Template
+   */
+  select?: Prisma.TemplateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Template
+   */
+  omit?: Prisma.TemplateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TemplateInclude<ExtArgs> | null
+  where?: Prisma.TemplateWhereInput
+}
+
+/**
+ * TestScenario.defaultForJob
+ */
+export type TestScenario$defaultForJobArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the JobDescription
+   */
+  select?: Prisma.JobDescriptionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the JobDescription
+   */
+  omit?: Prisma.JobDescriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.JobDescriptionInclude<ExtArgs> | null
+  where?: Prisma.JobDescriptionWhereInput
 }
 
 /**

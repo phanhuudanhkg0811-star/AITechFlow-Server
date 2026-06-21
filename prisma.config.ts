@@ -8,7 +8,7 @@ export default defineConfig({
   migrations: {
     path: 'prisma/migrations',
     // Vì ông đang dùng Node.js/NestJS nên mình dùng ts-node thay vì bun như ví dụ của nó
-    seed: 'npx tsx prisma/seed.ts',
+    seed: 'npx ts-node prisma/seed.ts',
   },
   datasource: {
     url: process.env['DATABASE_URL'],

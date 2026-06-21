@@ -9,6 +9,7 @@ import { IsPublic } from 'src/shared/decorators/auth.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  //endpoint /auth/github
   @Get('github')
   @IsPublic()
   @UseGuards(AuthGuard('github'))

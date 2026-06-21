@@ -160,6 +160,8 @@ export class AuthService {
         name: true,
         avatarUrl: true,
         role: true,
+        companyId: true,
+        company: { select: { id: true, name: true } },
         githubUsername: true,
       },
     });

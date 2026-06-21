@@ -302,7 +302,9 @@ export class TestService {
         }
       `;
 
-      const aiResponseString = await this.aiService.generateResult(aiPrompt);
+      const aiResponseString = await this.aiService.generateResult(aiPrompt, {
+        companyId: session.application.job.companyId,
+      });
 
       const cleanedJsonString = aiResponseString
         .replace(/^```(json)?\s*/, '')
@@ -366,13 +368,29 @@ export class TestService {
       const isPassed = aiAnalysis.evaluation.score >= 65;
 
       // Cập nhật trạng thái Application dựa trên điểm số
+      const remainingTests = isPassed
+        ? await this.prisma.testSession.count({
+            where: {
+              applicationId: session.applicationId,
+              id: { not: sessionId },
+              endTime: null,
+            },
+          })
+        : 0;
+
+      const nextStatus = isPassed
+        ? remainingTests > 0
+          ? 'TESTING'
+          : 'COMPLETED'
+        : 'REJECTED';
+
       await this.prisma.application.update({
         where: { id: session.applicationId },
-        data: { status: isPassed ? 'COMPLETED' : 'REJECTED' },
+        data: { status: nextStatus },
       });
 
       // LUỒNG XỬ LÝ GỬI EMAIL TỰ ĐỘNG
-      if (isPassed) {
+      if (isPassed && remainingTests === 0) {
         // Gửi email chúc mừng nếu ĐẬU
         try {
           await this.emailService.sendTestPassedCongratulation(
@@ -389,7 +407,7 @@ export class TestService {
             mailError,
           );
         }
-      } else {
+      } else if (!isPassed) {
         // THÊM: Gửi email thông báo từ chối nếu TRƯỢT (Điểm < 65)
         try {
           await this.emailService.sendRejection(candidateEmail, jobTitle);

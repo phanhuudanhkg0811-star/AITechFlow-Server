@@ -1,58 +1,150 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { config } from 'dotenv';
 
-// 1. Load file .env lên để lấy DATABASE_URL
 config();
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('❌ Không tìm thấy DATABASE_URL trong file .env');
+  throw new Error('DATABASE_URL is required to run the seed script');
 }
 
-// 2. Khởi tạo Adapter
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
-
-// 3. Nhét adapter vào thẳng PrismaClient
 const prisma = new PrismaClient({ adapter });
 
+const defaultInitialCode = {
+  BASIC_JS: {
+    'index.js': {
+      file: {
+        contents:
+          'function solution(input) {\n  return input;\n}\n\nconsole.log(solution("hello"));\n',
+      },
+    },
+  },
+  NEXTJS: {
+    'package.json': {
+      file: {
+        contents:
+          '{"scripts":{"dev":"next dev --hostname 0.0.0.0"},"dependencies":{"next":"latest","react":"latest","react-dom":"latest"}}',
+      },
+    },
+    'app/page.tsx': {
+      file: {
+        contents:
+          'export default function Page() {\n  return <main>Hello from Next.js</main>;\n}\n',
+      },
+    },
+  },
+  REACT_VITE: {
+    'package.json': {
+      file: {
+        contents:
+          '{"scripts":{"dev":"vite --host 0.0.0.0"},"dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","react":"latest","react-dom":"latest"}}',
+      },
+    },
+    'src/App.jsx': {
+      file: {
+        contents:
+          'export default function App() {\n  return <main>Hello from React + Vite</main>;\n}\n',
+      },
+    },
+  },
+  BLANK_CUSTOM: {
+    'README.md': {
+      file: {
+        contents: '# Custom test\n\nAdd starter files for this scenario.\n',
+      },
+    },
+  },
+} as const;
+
+async function upsertPublicTemplate(
+  templateType: keyof typeof defaultInitialCode,
+  name: string,
+  description: string,
+) {
+  const existing = await prisma.template.findFirst({
+    where: { templateType, isPublic: true },
+  });
+
+  const data = {
+    name,
+    description,
+    templateType,
+    initialCode: defaultInitialCode[templateType],
+    isPublic: true,
+    companyId: null,
+    createdBy: null,
+  };
+
+  if (existing) {
+    return prisma.template.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  return prisma.template.create({ data });
+}
+
 async function main() {
-  const HR_EMAIL = 'phanhuudanhkg123@gmail.com';
+  const adminEmail = 'phanhuudanhkg123@gmail.com';
 
-  console.log('🧹 Đang dọn dẹp dữ liệu cũ (tuỳ chọn)...');
-  // Nếu bạn muốn script này tự truncate các bảng mỗi khi chạy tay, mở comment đoạn dưới:
-  // await prisma.testSession.deleteMany();
-  // await prisma.application.deleteMany();
-  // await prisma.testScenario.deleteMany();
-  // await prisma.jobDescription.deleteMany();
-  // await prisma.user.deleteMany();
+  await prisma.company.upsert({
+    where: { name: 'Default Company' },
+    update: {},
+    create: { name: 'Default Company' },
+  });
 
-  console.log(`⏳ Đang tạo tài khoản HR: ${HR_EMAIL}...`);
-
-  // Dùng upsert để nếu chạy seed 2 lần cũng không bị lỗi trùng email
-  const hrUser = await prisma.user.upsert({
-    where: { email: HR_EMAIL },
-    update: {}, // Nếu đã tồn tại thì không làm gì cả
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      role: 'ADMIN',
+      companyId: null,
+    },
     create: {
-      email: HR_EMAIL,
-      name: 'Phan Hữu Danh (HR)',
-      role: 'HR',
+      email: adminEmail,
+      name: 'AI-TechFlow Admin',
+      role: 'ADMIN',
     },
   });
 
+  await upsertPublicTemplate(
+    'BASIC_JS',
+    'Basic JavaScript',
+    'A minimal JavaScript coding test template.',
+  );
+  await upsertPublicTemplate(
+    'NEXTJS',
+    'Next.js',
+    'A starter Next.js project for frontend tasks.',
+  );
+  await upsertPublicTemplate(
+    'REACT_VITE',
+    'React + Vite',
+    'A lightweight React project powered by Vite.',
+  );
+  await upsertPublicTemplate(
+    'BLANK_CUSTOM',
+    'Blank Custom',
+    'An empty template for fully custom scenarios.',
+  );
+
   console.log(
-    `✅ Thành công! Đã tạo/tìm thấy tài khoản HR: ${hrUser.email} (ID: ${hrUser.id})`,
+    'Seed completed: admin, default company, and templates are ready.',
   );
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Lỗi khi chạy seed:', e);
+  .catch((error) => {
+    console.error('Seed failed:', error);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-    // Đóng pool kết nối của pg
     await pool.end();
   });

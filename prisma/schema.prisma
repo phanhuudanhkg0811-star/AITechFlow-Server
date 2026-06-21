@@ -7,81 +7,14 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  extensions = [vector] // Kích hoạt pgvector cho PostgreSQL
-}
-
-// ---------------------------------------------------------
-// 1. AUTH & USERS (Quản lý Xác thực & Người dùng)
-// ---------------------------------------------------------
-model User {
-  id             String  @id @default(uuid())
-  email          String  @unique
-  githubId       String? @unique
-  githubUsername String?
-  name           String?
-  avatarUrl      String?
-  role           Role    @default(CANDIDATE)
-
-  sessions     Session[] // Quan hệ 1-N: 1 User có nhiều phiên đăng nhập
-  applications Application[]
-  createdJobs  JobDescription[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// Thêm bảng Session mới
-model Session {
-  id           String   @id @default(uuid())
-  userId       String
-  refreshToken String   @unique // Lưu refresh token đã được hash
-  userAgent    String? // Lưu thông tin trình duyệt (VD: Chrome on Windows)
-  ipAddress    String? // Lưu địa chỉ IP đăng nhập
-  expiresAt    DateTime // Thời gian token này hết hạn
-  createdAt    DateTime @default(now())
-
-  // Relation với bảng User, dùng Cascade để khi xóa User thì xóa luôn các session
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extensions = [vector]
 }
 
 enum Role {
-  CANDIDATE
+  ADMIN
+  COMPANY_ROOT
   HR
-  TECH_LEAD
-}
-
-// ---------------------------------------------------------
-// 2. CORE RECRUITMENT (JD, CV & Đơn ứng tuyển)
-// ---------------------------------------------------------
-model JobDescription {
-  id        String                      @id @default(uuid())
-  title     String
-  content   String //Nội dung của Job
-  embedding Unsupported("vector(3072)")?
-  hrEmail   String?                     @unique //Dùng để kiểm tra xem dùng email nào để nhận cv cho job này
-
-  creatorId String?
-  creator   User?   @relation(fields: [creatorId], references: [id])
-
-  applications Application[]
-  scenarios    TestScenario[]
-  createdAt    DateTime       @default(now())
-}
-
-model Application {
-  id          String                      @id @default(uuid())
-  userId      String
-  jobId       String
-  cvText      String // Nội dung bóc tách từ file PDF CV
-  cvEmbedding Unsupported("vector(3072)")?
-  matchScore  Float? // Điểm
-  status      AppStatus                   @default(SCREENING)
-
-  user User           @relation(fields: [userId], references: [id])
-  job  JobDescription @relation(fields: [jobId], references: [id])
-
-  testSession TestSession?
-  report      AssessmentReport?
+  CANDIDATE
 }
 
 enum AppStatus {
@@ -92,99 +25,210 @@ enum AppStatus {
   REJECTED
 }
 
-// ---------------------------------------------------------
-// 3. TELEMETRY & IDE MONITORING (Giám sát chống gian lận)
-// ---------------------------------------------------------
-model TestSession {
-  id            String    @id @default(uuid())
-  applicationId String    @unique
-  scenarioId    String
-  startTime     DateTime?
-  endTime       DateTime?
-
-  // Cục JSON chứa toàn bộ mã nguồn ứng viên nộp để AI chấm
-  finalCode Json?
-
-  application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  scenario    TestScenario @relation(fields: [scenarioId], references: [id])
-  ideEvents   IdeEvent[]
-  
-  // Đã thay thế promptLogs bằng conversations
-  conversations Conversation[] 
-}
-
-model IdeEvent {
-  id        String    @id @default(uuid())
-  sessionId String
-  eventType EventType // PASTE, KEYSTROKE_ANOMALY
-  payload   Json      // Chứa dữ liệu chi tiết, ví dụ: { pastedLines: 500 } 
-  createdAt DateTime  @default(now())
-
-  session TestSession @relation(fields: [sessionId], references: [id])
-}
-
 enum EventType {
   PASTE_EVENT
   TAB_SWITCH
   RAPID_TYPING
 }
 
-// ---------------------------------------------------------
-// 4. AI ASSESSMENT (Kết quả từ Virtual Tech Lead)
-// ---------------------------------------------------------
+enum TemplateType {
+  BASIC_JS
+  NEXTJS
+  REACT_VITE
+  BLANK_CUSTOM
+}
+
+model Company {
+  id                  String   @id @default(uuid())
+  name                String   @unique
+  apiKey              String?  @db.Text
+  tokenUsage          Int      @default(0)
+  aiSuggestionEnabled Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  users         User[]
+  jobs          JobDescription[]
+  emailAccounts EmailAccount[]
+  templates     Template[]
+}
+
+model User {
+  id             String  @id @default(uuid())
+  email          String  @unique
+  githubId       String? @unique
+  githubUsername String?
+  name           String?
+  avatarUrl      String?
+  role           Role    @default(CANDIDATE)
+  companyId      String?
+
+  company          Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  sessions         Session[]
+  applications     Application[]
+  createdJobs      JobDescription[] @relation("JobCreator")
+  createdTemplates Template[]       @relation("TemplateCreator")
+  emailAccounts    EmailAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailAccount {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  encryptedPassword String    @db.Text
+  userId            String
+  companyId         String
+  isActive          Boolean   @default(true)
+  lastUsed          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobs    JobDescription[]
+}
+
+model Template {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  templateType TemplateType
+  initialCode  Json
+  isPublic     Boolean      @default(false)
+  createdBy    String?
+  companyId    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  creator   User?          @relation("TemplateCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  company   Company?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  scenarios TestScenario[]
+}
+
+model JobDescription {
+  id                String                       @id @default(uuid())
+  title             String
+  content           String
+  embedding         Unsupported("vector(3072)")?
+  jobReference      String?
+  isActive          Boolean                      @default(true)
+  creatorId         String?
+  companyId         String
+  emailAccountId    String?
+  defaultScenarioId String?                      @unique
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  creator         User?          @relation("JobCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  emailAccount    EmailAccount?  @relation(fields: [emailAccountId], references: [id])
+  defaultScenario TestScenario?  @relation("DefaultScenario", fields: [defaultScenarioId], references: [id])
+  applications    Application[]
+  scenarios       TestScenario[] @relation("JobScenarios")
+}
+
+model TestScenario {
+  id          String   @id @default(uuid())
+  jobId       String
+  title       String
+  difficulty  String
+  timeLimit   Int      @default(90)
+  context     String   @db.Text
+  initialCode Json
+  templateId  String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  job           JobDescription  @relation("JobScenarios", fields: [jobId], references: [id], onDelete: Cascade)
+  template      Template?       @relation(fields: [templateId], references: [id])
+  defaultForJob JobDescription? @relation("DefaultScenario")
+  testSessions  TestSession[]
+}
+
+model Application {
+  id          String                       @id @default(uuid())
+  userId      String
+  jobId       String
+  cvText      String
+  cvEmbedding Unsupported("vector(3072)")?
+  matchScore  Float?
+  status      AppStatus                    @default(SCREENING)
+
+  user        User              @relation(fields: [userId], references: [id])
+  job         JobDescription    @relation(fields: [jobId], references: [id])
+  testSessions TestSession[]
+  report      AssessmentReport?
+}
+
+model TestSession {
+  id            String    @id @default(uuid())
+  applicationId String
+  scenarioId    String
+  startTime     DateTime?
+  endTime       DateTime?
+  finalCode     Json?
+
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scenario      TestScenario   @relation(fields: [scenarioId], references: [id])
+  ideEvents     IdeEvent[]
+  conversations Conversation[]
+}
+
+model IdeEvent {
+  id        String    @id @default(uuid())
+  sessionId String
+  eventType EventType
+  payload   Json
+  createdAt DateTime  @default(now())
+
+  session TestSession @relation(fields: [sessionId], references: [id])
+}
+
 model AssessmentReport {
   id                 String  @id @default(uuid())
   applicationId      String  @unique
   architectureScore  Float?
   cleanCodeScore     Float?
-  riskFlags          Json? // Lưu mảng các cảnh báo gian lận
-  interviewQuestions Json? // Các câu hỏi phỏng vấn tự sinh
-  summary            String? // Tóm tắt cho HR Portal
+  riskFlags          Json?
+  interviewQuestions Json?
+  summary            String?
 
   application Application @relation(fields: [applicationId], references: [id])
 }
 
-//Bối cảnh cho bài test
-model TestScenario {
-  id         String @id @default(uuid())
-  jobId      String
-  title      String
-  difficulty String
-  timeLimit  Int    @default(90)
-
-  context String @db.Text
-
-  // Cấu trúc file mẫu để WebContainers tải lên
-  initialCode Json
-
-  job          JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  testSessions TestSession[]
-  createdAt    DateTime       @default(now())
-}
-
-// ---------------------------------------------------------
-// 5. CHAT ASSISTANT LOGS (Thay thế cho PromptLog)
-// ---------------------------------------------------------
 model Conversation {
   id        String   @id @default(uuid())
-  testId    String   
+  testId    String
   title     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // LIÊN KẾT TRỰC TIẾP với TestSession. Khi xóa TestSession, các đoạn chat cũng bị xóa theo (Cascade)
-  session   TestSession @relation(fields: [testId], references: [id], onDelete: Cascade)
-  
-  messages  Message[]
+  session  TestSession @relation(fields: [testId], references: [id], onDelete: Cascade)
+  messages Message[]
 }
 
 model Message {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  role           String       // "user" hoặc "assistant"
-  content        String       @db.Text
-  status         String       @default("completed") // "processing", "completed", "failed"
-  createdAt      DateTime     @default(now())
+  role           String
+  content        String   @db.Text
+  status         String   @default("completed")
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }

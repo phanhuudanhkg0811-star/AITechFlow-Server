@@ -10,9 +10,10 @@
 */
 
 export const Role = {
-  CANDIDATE: 'CANDIDATE',
+  ADMIN: 'ADMIN',
+  COMPANY_ROOT: 'COMPANY_ROOT',
   HR: 'HR',
-  TECH_LEAD: 'TECH_LEAD'
+  CANDIDATE: 'CANDIDATE'
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
@@ -36,3 +37,13 @@ export const EventType = {
 } as const
 
 export type EventType = (typeof EventType)[keyof typeof EventType]
+
+
+export const TemplateType = {
+  BASIC_JS: 'BASIC_JS',
+  NEXTJS: 'NEXTJS',
+  REACT_VITE: 'REACT_VITE',
+  BLANK_CUSTOM: 'BLANK_CUSTOM'
+} as const
+
+export type TemplateType = (typeof TemplateType)[keyof typeof TemplateType]

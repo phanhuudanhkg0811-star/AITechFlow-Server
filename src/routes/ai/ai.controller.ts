@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { AiService } from './ai.service';
 import { Roles } from 'src/shared/decorators/role.decorator';
 import { RolesGuard } from 'src/shared/guards/role.guard';
@@ -13,19 +14,31 @@ export class AiController {
   ) {}
 
   @Post('suggestion')
-  async getSuggestion(@Body() body: any) {
-    const suggestion = await this.aiService.generateCodeSuggestion(body);
+  async getSuggestion(
+    @Body() body: any,
+    @Req() req: Request & { user: { sub: string } },
+  ) {
+    const suggestion = await this.aiService.generateCodeSuggestion(body, {
+      userId: req.user.sub,
+      testId: body?.testId,
+    });
     return { suggestion };
   }
 
   @Post('quick-edit')
-  async quickEdit(@Body() body: any) {
-    const editedCode = await this.aiService.generateQuickEdit(body);
+  async quickEdit(
+    @Body() body: any,
+    @Req() req: Request & { user: { sub: string } },
+  ) {
+    const editedCode = await this.aiService.generateQuickEdit(body, {
+      userId: req.user.sub,
+      testId: body?.testId,
+    });
     return { editedCode };
   }
 
   @Post('trigger-pipeline')
-  @Roles('HR', 'TECH_LEAD')
+  @Roles('HR', 'COMPANY_ROOT', 'ADMIN')
   @UseGuards(RolesGuard)
   triggerPipelineManually() {
     // Bỏ async/await ở hàm này để request trả về luôn lập tức (non-blocking)

@@ -51,14 +51,17 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  Company: 'Company',
   User: 'User',
   Session: 'Session',
+  EmailAccount: 'EmailAccount',
+  Template: 'Template',
   JobDescription: 'JobDescription',
+  TestScenario: 'TestScenario',
   Application: 'Application',
   TestSession: 'TestSession',
   IdeEvent: 'IdeEvent',
   AssessmentReport: 'AssessmentReport',
-  TestScenario: 'TestScenario',
   Conversation: 'Conversation',
   Message: 'Message'
 } as const
@@ -79,6 +82,19 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CompanyScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  apiKey: 'apiKey',
+  tokenUsage: 'tokenUsage',
+  aiSuggestionEnabled: 'aiSuggestionEnabled',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CompanyScalarFieldEnum = (typeof CompanyScalarFieldEnum)[keyof typeof CompanyScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -87,6 +103,7 @@ export const UserScalarFieldEnum = {
   name: 'name',
   avatarUrl: 'avatarUrl',
   role: 'role',
+  companyId: 'companyId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -107,16 +124,69 @@ export const SessionScalarFieldEnum = {
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
 
 
+export const EmailAccountScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  encryptedPassword: 'encryptedPassword',
+  userId: 'userId',
+  companyId: 'companyId',
+  isActive: 'isActive',
+  lastUsed: 'lastUsed',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EmailAccountScalarFieldEnum = (typeof EmailAccountScalarFieldEnum)[keyof typeof EmailAccountScalarFieldEnum]
+
+
+export const TemplateScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  templateType: 'templateType',
+  initialCode: 'initialCode',
+  isPublic: 'isPublic',
+  createdBy: 'createdBy',
+  companyId: 'companyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TemplateScalarFieldEnum = (typeof TemplateScalarFieldEnum)[keyof typeof TemplateScalarFieldEnum]
+
+
 export const JobDescriptionScalarFieldEnum = {
   id: 'id',
   title: 'title',
   content: 'content',
-  hrEmail: 'hrEmail',
+  jobReference: 'jobReference',
+  isActive: 'isActive',
   creatorId: 'creatorId',
-  createdAt: 'createdAt'
+  companyId: 'companyId',
+  emailAccountId: 'emailAccountId',
+  defaultScenarioId: 'defaultScenarioId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type JobDescriptionScalarFieldEnum = (typeof JobDescriptionScalarFieldEnum)[keyof typeof JobDescriptionScalarFieldEnum]
+
+
+export const TestScenarioScalarFieldEnum = {
+  id: 'id',
+  jobId: 'jobId',
+  title: 'title',
+  difficulty: 'difficulty',
+  timeLimit: 'timeLimit',
+  context: 'context',
+  initialCode: 'initialCode',
+  templateId: 'templateId',
+  isDefault: 'isDefault',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TestScenarioScalarFieldEnum = (typeof TestScenarioScalarFieldEnum)[keyof typeof TestScenarioScalarFieldEnum]
 
 
 export const ApplicationScalarFieldEnum = {
@@ -167,20 +237,6 @@ export const AssessmentReportScalarFieldEnum = {
 export type AssessmentReportScalarFieldEnum = (typeof AssessmentReportScalarFieldEnum)[keyof typeof AssessmentReportScalarFieldEnum]
 
 
-export const TestScenarioScalarFieldEnum = {
-  id: 'id',
-  jobId: 'jobId',
-  title: 'title',
-  difficulty: 'difficulty',
-  timeLimit: 'timeLimit',
-  context: 'context',
-  initialCode: 'initialCode',
-  createdAt: 'createdAt'
-} as const
-
-export type TestScenarioScalarFieldEnum = (typeof TestScenarioScalarFieldEnum)[keyof typeof TestScenarioScalarFieldEnum]
-
-
 export const ConversationScalarFieldEnum = {
   id: 'id',
   testId: 'testId',
@@ -212,19 +268,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

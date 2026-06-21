@@ -1,0 +1,111 @@
+{
+  "verdict": "PASS",
+  "overall_score": 7,
+  "seniority_estimate": "Mid-level",
+  "job_fit": {
+    "is_fit": true,
+    "reason": "Ứng viên thể hiện sự hiểu biết vững chắc về React (bao gồm hooks, React Router, Context API, lazy loading) và các công cụ frontend hiện đại như Vite, Tailwind CSS, React Hook Form. Tư duy logic tốt được thể hiện qua cấu trúc component và cách xử lý dữ liệu. Kỹ năng lập trình cơ bản với HTML, CSS, JavaScript được đáp ứng tốt. Mặc dù có một số điểm cần cải thiện, ứng viên đáp ứng các yêu cầu cốt lõi của vị trí."
+  },
+  "architecture": {
+    "pattern": "Component-based / Feature-driven",
+    "summary": "Kiến trúc ứng dụng được tổ chức theo hướng component-based, chia nhỏ giao diện thành các thành phần tái sử dụng. Các trang (pages) được dùng để tổng hợp các thành phần nhỏ hơn, và có sự phân tách rõ ràng giữa UI, logic nghiệp vụ và utility functions. Đây là một cấu trúc tốt cho các ứng dụng React vừa và nhỏ.",
+    "scalability": "Kiến trúc hiện tại có khả năng mở rộng tốt cho một ứng dụng frontend cỡ vừa nhờ vào việc phân chia component rõ ràng và sử dụng hooks/context. Tuy nhiên, việc thiếu một lớp abstraction cho API client và sự lặp lại logic fetching ở nhiều nơi có thể gây khó khăn khi mở rộng các tính năng liên quan đến dữ liệu."
+  },
+  "solid_scores": {
+    "S": {
+      "score": 7,
+      "comment": "Nhiều component tuân thủ Single Responsibility (ví dụ: Image, CircularProgressBar, MovieCard). Tuy nhiên, một số page components (SearchPage, MovieDetail, TVShowDetail, PeopleDetail) và ModalProvider đảm nhiệm nhiều trách nhiệm hơn mức cần thiết, bao gồm cả fetching data và quản lý UI."
+    },
+    "O": {
+      "score": 8,
+      "comment": "Các component thường được thiết kế để mở rộng thông qua props mà không cần sửa đổi mã nguồn chính, cho phép tái sử dụng dễ dàng (ví dụ: MovieCard, Image, CircularProgressBar)."
+    },
+    "L": {
+      "score": 8,
+      "comment": "Không có dấu hiệu vi phạm rõ ràng nguyên tắc Liskov Substitution. Các component nhận props và hoạt động đúng như mong đợi."
+    },
+    "I": {
+      "score": 8,
+      "comment": "Các props của component tương đối nhỏ gọn và tập trung vào chức năng cụ thể của component, không có interface quá 'fat'."
+    },
+    "D": {
+      "score": 6,
+      "comment": "Ứng viên đã cố gắng sử dụng Dependency Inversion thông qua custom hook `useFetch` và Context API (`ModalProvider`). Tuy nhiên, việc fetch data trực tiếp trong nhiều page components thay vì sử dụng `useFetch` một cách nhất quán cho thấy sự phụ thuộc vào các triển khai cụ thể thay vì abstraction."
+    }
+  },
+  "issues": [
+    {
+      "severity": "HIGH",
+      "file": "src/pages/MovieDetail.jsx, src/pages/TVShowDetail.jsx, src/pages/PeopleDetail.jsx, src/pages/SearchPage.jsx, src/components/FeatureMovies/index.jsx, src/components/MediaList/index.jsx",
+      "line_hint": "fetch(...) calls",
+      "description": "Logic gọi API bị lặp lại ở nhiều component và page, không tận dụng nhất quán custom hook `useFetch` đã được tạo. Điều này gây khó khăn trong việc quản lý, bảo trì và mở rộng.",
+      "suggestion": "Tái cấu trúc để tất cả các cuộc gọi API đều sử dụng `useFetch` hook hoặc một API client tập trung, giúp quản lý tập trung các headers, error handling và loading state."
+    },
+    {
+      "severity": "HIGH",
+      "file": "src/components/SearchForm/index.jsx, src/hooks/useFetch.jsx",
+      "line_hint": "useEffect dependency array",
+      "description": "Sử dụng `JSON.stringify(formValues)` và `JSON.stringify(headers)` trong mảng dependencies của `useEffect`. Đây là một anti-pattern vì nó có thể gây ra lỗi hiệu suất và trigger lại effect không cần thiết hoặc bỏ lỡ cập nhật nếu giá trị bên trong object/array thay đổi mà reference không đổi.",
+      "suggestion": "Thay thế bằng cách sử dụng các giá trị nguyên thủy từ object/array trong dependency array, hoặc sử dụng `useRef` nếu object/array không cần trigger lại effect, hoặc sử dụng `useMemo` và `useCallback` để đảm bảo stable references."
+    },
+    {
+      "severity": "MEDIUM",
+      "file": "src/context/ModalProvider.jsx",
+      "line_hint": "document.body.style.overflow",
+      "description": "Thực hiện thao tác DOM trực tiếp (thay đổi `document.body.style.overflow`). Điều này bypass cơ chế quản lý DOM của React, có thể gây xung đột với các thư viện khác hoặc các phần khác của ứng dụng.",
+      "suggestion": "Nên sử dụng các thư viện React chuyên dụng để quản lý body scroll (ví dụ: `react-remove-scroll`) hoặc đóng gói logic này trong một custom hook để quản lý side effect một cách an toàn và có kiểm soát hơn."
+    },
+    {
+      "severity": "MEDIUM",
+      "file": "src/pages/PeopleDetail.jsx, src/hooks/useFetch.jsx",
+      "line_hint": "eslint-disable comments",
+      "description": "Sử dụng `eslint-disable` comments (`react-hooks/set-state-in-effect`, `react-hooks/exhaustive-deps`) mà không có giải thích rõ ràng hoặc giải pháp triệt để cho vấn đề underlying. Điều này có thể che giấu các lỗi tiềm ẩn liên quan đến lifecycle của React hooks.",
+      "suggestion": "Xem xét lại logic để đảm bảo tuân thủ các quy tắc của React hooks. Nếu cần disable, hãy cung cấp lý do rõ ràng và cân nhắc các giải pháp thay thế để loại bỏ nhu cầu disable."
+    },
+    {
+      "severity": "MEDIUM",
+      "file": "src/components/SearchForm/FormField.jsx",
+      "line_hint": "Component prop usage in render",
+      "description": "Trong `FormField`, prop `Component` được truyền vào `Controller`'s `render` prop, nhưng lại không được gọi/render đúng cách bên trong hàm render đó. `// eslint-disable-next-line no-unused-vars` cũng chỉ ra một vấn đề về việc sử dụng biến không đúng.",
+      "suggestion": "Trong `Controller`'s `render` prop, nên render `Component` và truyền các `field` props của `react-hook-form` cho nó (ví dụ: `<Component {...field} />`)."
+    },
+    {
+      "severity": "LOW",
+      "file": "src/pages/MovieDetail.jsx, src/pages/TVShowDetail.jsx",
+      "line_hint": "Commented-out code",
+      "description": "Tồn tại các đoạn mã được comment-out trong các file quan trọng, làm code khó đọc và tiềm ẩn rủi ro về việc mã chết.",
+      "suggestion": "Xóa bỏ các đoạn mã đã comment-out không cần thiết."
+    },
+    {
+      "severity": "LOW",
+      "file": "src/pages/SearchPage.jsx, src/pages/PeopleDetail.jsx, src/pages/MovieDetail.jsx, src/components/MovieDetail/Information.jsx",
+      "line_hint": "console.log statements",
+      "description": "Có nhiều câu lệnh `console.log` được để lại trong mã nguồn, điều này không phù hợp cho môi trường production và có thể làm lộ thông tin nhạy cảm hoặc làm giảm hiệu suất.",
+      "suggestion": "Xóa bỏ tất cả các `console.log` trước khi triển khai production."
+    },
+    {
+      "severity": "LOW",
+      "file": "src/pages/NotFoundPage.jsx",
+      "line_hint": "h2 className=\"text-xl\">Lười quá! để nào rảnh làm tiếp</h2>",
+      "description": "Có một comment/dòng chữ không chuyên nghiệp trong mã nguồn.",
+      "suggestion": "Loại bỏ hoặc thay thế bằng nội dung chuyên nghiệp hơn."
+    }
+  ],
+  "strengths": [
+    "Hiểu biết tốt về React (functional components, hooks, Context API, lazy loading) và cách xây dựng ứng dụng theo hướng component-based.",
+    "Sử dụng hiệu quả các công cụ và thư viện hiện đại như Vite, React Router DOM, Tailwind CSS, React Hook Form.",
+    "Khả năng tái sử dụng component tốt và tư duy modular (ví dụ: Image, MovieCard, CircularProgressBar).",
+    "Thực hiện asynchronous data fetching hiệu quả, bao gồm sử dụng `Promise.all` để tối ưu hóa hiệu suất.",
+    "Đã cố gắng tạo custom hook (`useFetch`) để trừu tượng hóa logic fetching, thể hiện tư duy thiết kế tái sử dụng."
+  ],
+  "red_flags": [
+    "Sử dụng `eslint-disable` comments để bỏ qua các cảnh báo linter mà không giải quyết vấn đề gốc, có thể che giấu bugs hoặc anti-patterns.",
+    "Thao tác DOM trực tiếp (`document.body.style.overflow`) trong React, điều này là một anti-pattern và có thể dẫn đến xung đột."
+  ],
+  "interview_questions": [
+    "Trong các component như `MovieDetail` hay `SearchPage`, bạn đã thực hiện gọi API trực tiếp. Đồng thời, bạn cũng có một `useFetch` custom hook. Bạn sẽ làm gì để thống nhất cách gọi API trong toàn bộ ứng dụng và tại sao điều đó lại quan trọng?",
+    "Trong `ModalProvider`, bạn đã thay đổi `document.body.style.overflow` trực tiếp. Có những rủi ro nào khi thao tác DOM trực tiếp như vậy trong React, và bạn sẽ đề xuất giải pháp thay thế nào để đạt được hiệu quả tương tự?",
+    "Bạn đã sử dụng `JSON.stringify` trong dependency array của `useEffect` (ví dụ: `useFetch` và `SearchForm`). Hãy giải thích lý do bạn làm vậy và những nhược điểm tiềm ẩn của phương pháp này. Có cách nào tốt hơn để xử lý các dependencies là object/array không?",
+    "Giải thích cách bạn đã tổ chức project này (ví dụ: `components`, `pages`, `libs`, `hooks`, `context`). Có ưu nhược điểm gì với cách tổ chức này, và bạn sẽ cải thiện nó như thế nào cho một ứng dụng lớn hơn?"
+  ]
+}

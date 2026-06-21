@@ -77,7 +77,7 @@ export class DashboardService {
         select: {
           id: true,
           title: true,
-          hrEmail: true,
+          emailAccount: { select: { email: true } },
           createdAt: true,
           _count: { select: { applications: true } },
         },
@@ -92,7 +92,10 @@ export class DashboardService {
         totalPages: Math.ceil(totalItems / limit),
         currentPage: page,
       },
-      items: jobs,
+      items: jobs.map((job) => ({
+        ...job,
+        hrEmail: job.emailAccount?.email ?? null,
+      })),
     };
   }
 
@@ -146,7 +149,7 @@ export class DashboardService {
       include: {
         user: true,
         job: true,
-        testSession: {
+        testSessions: {
           include: { conversations: true },
         },
         report: true,

@@ -8,20 +8,48 @@ export enum difficultyEnum {
 }
 
 export const createJobWithScenarioSchema = z.object({
-  title: z.string().min(5, 'Tiêu đề chiến dịch phải có ít nhất 5 ký tự'),
-  content: z.string().min(50, 'Nội dung JD cần ít nhất 50 ký tự'),
-  hrEmail: z.string().email('Định dạng email không hợp lệ').optional(),
-
-  // --- Thông tin đính kèm cho bài Test ---
-  scenarioTitle: z.string().min(5, 'Tiêu đề bài thi quá ngắn'),
-  difficulty: z.enum([
-    difficultyEnum.INTERN,
-    difficultyEnum.JUNIOR,
-    difficultyEnum.MID_LEVEL,
-    difficultyEnum.SENIOR,
-  ]),
-  timeLimit: z.number().int().min(10, 'Thời gian làm bài tối thiểu là 10 phút'),
-  scenarioContext: z.string().min(10, 'Bối cảnh (Context) không được để trống'),
+  title: z.string().min(5, 'Campaign title must be at least 5 characters'),
+  content: z.string().min(50, 'Job description must be at least 50 characters'),
+  hrEmail: z.string().email('Invalid email format').optional(),
+  emailAccountId: z.string().uuid().optional(),
+  jobReference: z.string().trim().min(1).optional(),
+  scenarioTitle: z.string().min(5, 'Test title is too short').optional(),
+  difficulty: z
+    .enum([
+      difficultyEnum.INTERN,
+      difficultyEnum.JUNIOR,
+      difficultyEnum.MID_LEVEL,
+      difficultyEnum.SENIOR,
+    ])
+    .optional(),
+  timeLimit: z
+    .number()
+    .int()
+    .min(10, 'Minimum time limit is 10 minutes')
+    .optional(),
+  scenarioContext: z
+    .string()
+    .min(10, 'Scenario context is required')
+    .optional(),
+  scenarios: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        title: z.string().min(5, 'Test title is too short'),
+        difficulty: z.enum([
+          difficultyEnum.INTERN,
+          difficultyEnum.JUNIOR,
+          difficultyEnum.MID_LEVEL,
+          difficultyEnum.SENIOR,
+        ]),
+        timeLimit: z.number().int().min(10).default(90),
+        context: z.string().min(10, 'Scenario context is required'),
+        templateId: z.string().uuid().optional(),
+        initialCode: z.unknown().optional(),
+        isDefault: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type CreateJobWithScenarioDto = z.infer<
